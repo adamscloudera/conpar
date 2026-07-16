@@ -47,6 +47,6 @@ export function exportTemplate(
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
 
-  const base = originalFilename.replace(/\.[^.]+$/, '')
+  const base = originalFilename.replace(/\.[^.]+$/, '').replace(/_populated$/, '')
   XLSX.writeFile(wb, `${base}_populated.xlsx`)
 }

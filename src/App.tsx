@@ -36,7 +36,7 @@ export default function App() {
 
   const prevTemplateLen = useRef(0)
   const prevDiscoveryLen = useRef(0)
-  const prevResultsLen = useRef(0)
+  const prevMatchSig = useRef('')
 
   // Recompute mappings whenever template rows or discovery files change
   useEffect(() => {
@@ -64,18 +64,19 @@ export default function App() {
     prevDiscoveryLen.current = discoveryFiles.length
   }, [discoveryFiles, addLog])
 
-  // Log matching results
+  // Log matching results — re-fires when status distribution changes (not just row count)
   useEffect(() => {
-    if (results.length && results.length !== prevResultsLen.current) {
-      prevResultsLen.current = results.length
-      const auto = results.filter((r) => r.status === 'auto_filled').length
-      const needs = results.filter((r) => r.status === 'needs_selection').length
-      const noMatch = results.filter((r) => r.status === 'no_match').length
-      const preFilled = results.filter((r) => r.status === 'pre_filled').length
-      addLog(
-        `Matching complete: ${results.length} rows — ${preFilled} pre-filled, ${auto} auto-filled, ${needs} need review, ${noMatch} no match`
-      )
-    }
+    if (!results.length) return
+    const auto = results.filter((r) => r.status === 'auto_filled').length
+    const needs = results.filter((r) => r.status === 'needs_selection').length
+    const noMatch = results.filter((r) => r.status === 'no_match').length
+    const preFilled = results.filter((r) => r.status === 'pre_filled').length
+    const sig = `${preFilled}:${auto}:${needs}:${noMatch}`
+    if (sig === prevMatchSig.current) return
+    prevMatchSig.current = sig
+    addLog(
+      `Matching complete: ${results.length} rows — ${preFilled} pre-filled, ${auto} auto-filled, ${needs} need review, ${noMatch} no match`
+    )
   }, [results, addLog])
 
   const hasTemplate = !!templateType
