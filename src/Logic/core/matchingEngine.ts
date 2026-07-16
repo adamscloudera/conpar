@@ -81,7 +81,12 @@ function candidatesFromImpalaColumns(
   // Extract identifier tokens from the connection key for DB-name matching.
   // "Project.ConnectionManagers[ISPWarehouse]" → ["ISPWAREHOUSE"]
   // "ODS_WH"                                  → ["ODS", "WH"]
-  const keyTokenSet = new Set(extractKeyIdentifier(row.key))
+  // SSIS templates use GUID keys ({099FF4C3-...}) that carry no DB signal,
+  // so fall back to the connection logic name in that case.
+  const rawKeyTokens = extractKeyIdentifier(row.key)
+  const keyTokenSet = new Set(
+    rawKeyTokens.length > 0 ? rawKeyTokens : extractKeyIdentifier(row.connectionLogicName)
+  )
 
   // Group by (databaseName||schemaName) to keep same-named schemas in different
   // environments separate (e.g. ISPWarehouse_BDEV.dbo ≠ ISPWarehouse_Prod.dbo)
