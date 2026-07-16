@@ -92,21 +92,25 @@ function CandidateSelector({ result }: { result: MappingResult }) {
             : 'border-border bg-gray-50 text-foreground hover:bg-gray-100',
         )}
       >
-        <span className="font-mono">{resolvedSchema(result) || 'Select…'}</span>
+        <span className="font-mono">
+          {resolvedDb(result) ? `${resolvedDb(result)}.` : ''}{resolvedSchema(result) || 'Select…'}
+        </span>
         <ChevronDown className="w-3 h-3" />
       </button>
 
       {open && (
-        <div className="absolute z-10 top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-lg min-w-48 max-h-48 overflow-y-auto">
+        <div className="absolute z-10 top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-lg min-w-56 max-h-64 overflow-y-auto">
           {result.candidates.map((c) => (
             <button
-              key={c.schemaName}
+              key={`${c.databaseName}.${c.schemaName}`}
               onClick={() => { selectCandidate(result.rowIndex, c); setOpen(false) }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-primary-surface transition-colors border-b border-border last:border-0"
             >
-              <p className="font-mono font-medium text-foreground">{c.schemaName}</p>
+              <p className="font-mono font-medium text-foreground">{c.databaseName}.{c.schemaName}</p>
               <p className="text-muted mt-0.5">
-                score {c.score.toFixed(1)} · path {c.signals.pathTokenOverlap} · table {c.signals.tableNameOverlap} · freq {c.signals.sourceFrequency}
+                {c.score > 0
+                  ? `score ${c.score.toFixed(1)} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
+                  : 'no token match — manual selection'}
               </p>
             </button>
           ))}

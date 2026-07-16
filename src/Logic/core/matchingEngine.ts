@@ -90,27 +90,34 @@ function candidatesFromImpalaColumns(
     schemaGroups.set(key, existing)
   }
 
-  const candidates: CandidateSchema[] = []
+  const scored: CandidateSchema[] = []
+  const unscored: CandidateSchema[] = []
+
   for (const [, rows] of schemaGroups) {
     const schema = rows[0].schemaName
     const db = rows[0].databaseName
     const pathTokenOverlap = tokenOverlap(pathTokens, schema)
     const tableNameOverlap = rows.reduce((acc, ir) => acc + tokenOverlap(pathTokens, ir.objectName), 0)
     const sourceFrequency = rows.filter((ir) => tokenOverlap(pathTokens, ir.objectName) > 0).length
-
-    if (pathTokenOverlap === 0 && tableNameOverlap === 0) continue
-
     const score = pathTokenOverlap * 3 + tableNameOverlap * 2 + Math.min(sourceFrequency, 5)
-    candidates.push({
+
+    const candidate: CandidateSchema = {
       databaseName: db || schema,
       schemaName: schema,
       score,
       signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency },
       sourceFile: file.filename,
-    })
+    }
+
+    if (score > 0) {
+      scored.push(candidate)
+    } else if (dbFilter) {
+      // When DB is known, keep all schemas so the user can manually verify
+      unscored.push(candidate)
+    }
   }
 
-  return candidates
+  return [...scored, ...unscored]
 }
 
 function mergeCandidates(all: CandidateSchema[]): CandidateSchema[] {
@@ -184,24 +191,40 @@ export function computeMappings(
       }
     }
 
-    // Drop candidates scoring below 15% of the top to remove noise from display;
-    // keep at least the top 3 so the user still has options.
-    const topScore = merged[0].score
-    const meaningful = merged.filter((c) => c.score >= topScore * 0.15)
-    const candidates = meaningful.length >= 3 ? meaningful : merged.slice(0, 3)
+    // Separate scored candidates from unscored DB fallbacks
+    const nonZero = merged.filter((c) => c.score > 0)
+    const zeroScore = merged.filter((c) => c.score === 0)
 
-    // Auto-fill when winner is dominant (≥2.5× runner-up) — a keyword-search
-    // Impala file will always produce multiple schemas, so strict count=1 is too narrow.
+    // Apply noise-removal filter to scored candidates only; keep top 3 minimum
+    let displayScored: CandidateSchema[]
+    if (nonZero.length) {
+      const topScore = nonZero[0].score
+      const meaningful = nonZero.filter((c) => c.score >= topScore * 0.15)
+      displayScored = meaningful.length >= 3 ? meaningful : nonZero.slice(0, 3)
+    } else {
+      displayScored = []
+    }
+
+    // Unscored DB schemas appended at end for manual review
+    const candidates = [...displayScored, ...zeroScore]
+
+    // Dominant check based on scored candidates only
     const dominant =
-      candidates.length === 1 ||
-      (candidates.length > 1 && candidates[0].score >= candidates[1].score * 2.5)
+      nonZero.length === 1 ||
+      (nonZero.length > 1 && nonZero[0].score >= nonZero[1].score * 2.5)
 
-    const status: MappingStatus = dominant ? 'auto_filled' : 'needs_selection'
+    // If no scored candidates, prompt user to pick from the DB's schemas
+    const status: MappingStatus = !nonZero.length
+      ? 'needs_selection'
+      : dominant
+        ? 'auto_filled'
+        : 'needs_selection'
+
     return {
       rowIndex,
       templateRow: row,
       candidates,
-      selectedCandidate: candidates[0],
+      selectedCandidate: candidates[0] ?? null,
       manualDatabase: '',
       manualSchema: '',
       status,
