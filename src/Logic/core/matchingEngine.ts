@@ -1,5 +1,5 @@
 import type { CandidateSchema, DiscoveryFile, MappingResult, MappingStatus, TemplateRow } from '../../types.ts'
-import { canonicalToken, extractPathTokens } from './tokenExtractor.ts'
+import { canonicalToken, extractKeyIdentifier, extractPathTokens } from './tokenExtractor.ts'
 
 function tokenOverlap(pathTokens: Set<string>, name: string): number {
   const nameTokens = extractPathTokens(name)
@@ -60,7 +60,7 @@ function candidatesFromLineageMap(
       databaseName: schema,
       schemaName: schema,
       score,
-      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency },
+      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap: 0 },
       sourceFile: file.filename,
     })
   }
@@ -78,16 +78,31 @@ function candidatesFromImpalaColumns(
     ? canonicalToken(row.databaseName)
     : ''
 
-  // Group by (databaseName, schemaName)
+  // Extract identifier tokens from the connection key for DB-name matching.
+  // "Project.ConnectionManagers[ISPWarehouse]" → ["ISPWAREHOUSE"]
+  // "ODS_WH"                                  → ["ODS", "WH"]
+  const keyTokenSet = new Set(extractKeyIdentifier(row.key))
+
+  // Group by (databaseName||schemaName) to keep same-named schemas in different
+  // environments separate (e.g. ISPWarehouse_BDEV.dbo ≠ ISPWarehouse_Prod.dbo)
   const schemaGroups = new Map<string, typeof file.impalaRows>()
   for (const ir of file.impalaRows) {
     if (dbFilter && canonicalToken(ir.databaseName) !== dbFilter) continue
 
-    const key = canonicalToken(ir.schemaName) || canonicalToken(ir.databaseName)
-    if (!key) continue
-    const existing = schemaGroups.get(key) ?? []
+    // Without a known DB, only include rows from DBs that share key tokens.
+    // This prevents unrelated databases from flooding the candidate list.
+    if (!dbFilter && keyTokenSet.size > 0) {
+      const dbParts = new Set(extractPathTokens(ir.databaseName))
+      let overlap = 0
+      for (const t of keyTokenSet) { if (dbParts.has(t)) overlap++ }
+      if (overlap === 0) continue
+    }
+
+    const groupKey = `${canonicalToken(ir.databaseName)}||${canonicalToken(ir.schemaName)}`
+    if (!groupKey.replace('||', '')) continue
+    const existing = schemaGroups.get(groupKey) ?? []
     existing.push(ir)
-    schemaGroups.set(key, existing)
+    schemaGroups.set(groupKey, existing)
   }
 
   const scored: CandidateSchema[] = []
@@ -99,13 +114,19 @@ function candidatesFromImpalaColumns(
     const pathTokenOverlap = tokenOverlap(pathTokens, schema)
     const tableNameOverlap = rows.reduce((acc, ir) => acc + tokenOverlap(pathTokens, ir.objectName), 0)
     const sourceFrequency = rows.filter((ir) => tokenOverlap(pathTokens, ir.objectName) > 0).length
-    const score = pathTokenOverlap * 3 + tableNameOverlap * 2 + Math.min(sourceFrequency, 5)
+
+    // How many key tokens appear in the database name
+    const dbParts = new Set(extractPathTokens(db))
+    let keyDbOverlap = 0
+    for (const t of keyTokenSet) { if (dbParts.has(t)) keyDbOverlap++ }
+
+    const score = keyDbOverlap * 10 + pathTokenOverlap * 3 + tableNameOverlap * 2 + Math.min(sourceFrequency, 5)
 
     const candidate: CandidateSchema = {
       databaseName: db || schema,
       schemaName: schema,
       score,
-      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency },
+      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap },
       sourceFile: file.filename,
     }
 
@@ -123,7 +144,8 @@ function candidatesFromImpalaColumns(
 function mergeCandidates(all: CandidateSchema[]): CandidateSchema[] {
   const merged = new Map<string, CandidateSchema>()
   for (const c of all) {
-    const key = canonicalToken(c.schemaName)
+    // Key includes DB so same schema name in different environments stays separate
+    const key = `${canonicalToken(c.databaseName)}||${canonicalToken(c.schemaName)}`
     const existing = merged.get(key)
     if (!existing || c.score > existing.score) {
       merged.set(key, c)

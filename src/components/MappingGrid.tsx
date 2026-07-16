@@ -109,7 +109,7 @@ function CandidateSelector({ result }: { result: MappingResult }) {
               <p className="font-mono font-medium text-foreground">{c.databaseName}.{c.schemaName}</p>
               <p className="text-muted mt-0.5">
                 {c.score > 0
-                  ? `score ${c.score.toFixed(1)} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
+                  ? `score ${c.score.toFixed(1)} · key→db ${c.signals.keyDbOverlap} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
                   : 'no token match — manual selection'}
               </p>
             </button>

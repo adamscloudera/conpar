@@ -44,6 +44,7 @@ export type CandidateSignals = {
   pathTokenOverlap: number;
   tableNameOverlap: number;
   sourceFrequency: number;
+  keyDbOverlap: number;
 };
 
 export type CandidateSchema = {

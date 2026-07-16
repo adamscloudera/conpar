@@ -34,6 +34,29 @@ export function extractPathTokens(path: string): string[] {
   return tokens
 }
 
+/**
+ * Extract the meaningful database identifier from a connection key.
+ *   "Project.ConnectionManagers[ISPWarehouse]" → ["ISPWAREHOUSE"]
+ *   "LIBS_CE"                                  → ["LIBS", "CE"]
+ *   "ODS_WH"                                   → ["ODS", "WH"]
+ *   "{GUID}"                                   → []
+ */
+export function extractKeyIdentifier(key: string): string[] {
+  if (/^\{[0-9a-f-]+\}$/i.test(key)) return []
+
+  const bracketMatch = key.match(/\[([^\]]+)\]/)
+  const identifier = bracketMatch ? bracketMatch[1] : key
+
+  const seen = new Set<string>()
+  const tokens: string[] = []
+  for (const part of identifier.split(/[_\s\-.]+/)) {
+    const t = part.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    if (t.length < 2) continue
+    if (!seen.has(t)) { seen.add(t); tokens.push(t) }
+  }
+  return tokens
+}
+
 export type ScoredToken = {
   token: string;
   frequency: number;
