@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-surface: #eff6ff;
+  --color-primary-border: #bfdbfe;
+  --color-background: #f3f4f6;
+  --color-foreground: #111827;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-card: #ffffff;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border, currentColor);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply bg-card rounded-2xl border border-border;
+    box-shadow: var(--shadow-card);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors;
+    background-color: var(--color-primary);
+  }
+  .btn-primary:hover { background-color: var(--color-primary-dark); }
+  .btn-primary:disabled { @apply opacity-40 cursor-not-allowed; }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted hover:text-foreground hover:bg-gray-100 transition-colors;
+  }
+
+  .drop-zone {
+    @apply flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors cursor-pointer;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-surface);
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-blue   { @apply bg-blue-100 text-blue-700; }
+  .badge-green  { @apply bg-green-100 text-green-700; }
+  .badge-amber  { @apply bg-amber-100 text-amber-700; }
+  .badge-red    { @apply bg-red-100 text-red-700; }
+  .badge-gray   { @apply bg-gray-100 text-gray-600; }
+}

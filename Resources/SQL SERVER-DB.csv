@@ -1,0 +1,459 @@
+﻿Database Type,Server Name,Database Name,Schema Name,Object Name,Object Type,Comment,Connection Logic Name,CONNECTION_ID
+SQLS,,ODS_WH,CandidateAssessment,AwardActivities,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingAssStats,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingAssSummary,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingCentreTypeEntries,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingComStats,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingComSummary,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingGDOStats,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingGDOSummary,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingOptStats,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingOptSummary,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardMeetingSessions,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AwardScheduleEvents,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AggregatedCandidateComponentMarkSet,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AggregatedCandidateMarkElements,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AggregatedItemMarks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,AggregatedQuestionPaperItemGroups,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateAssessmentEntries,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateAssessmentEntries_Hist,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateCertificateParts,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateComponentMarkSet,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateComponentResults,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateComponentResults_Hist,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateScholarships,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateScholarships_Hist,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateSessionOptionThresholds,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateSessionOptionThresholds_Hist,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateSessionOptionThresholdsAudit,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateSplitComponentResults,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateOMRInfo,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateOptionResults,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateOptionResults_Hist,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateMarkElementMarks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CandidateMarkElementMarks_Hist,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,CertificateGradeBoundaries,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,ComponentRawGradeBoundaries,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,ComponentUMSGradeBoundaries,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,Exceptions,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,ItemGroupMarkers,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,ItemMarks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,MalpracticeCaseCandidates,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,MalpracticeCases,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,QuestionPaperItemGroups,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateAssessment,Remarks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateTests,Tasks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateTests,TestComponentMappings,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateTests,TestDetails,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,CandidateTests,TestItems,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,dbo,sysdiagrams,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,dbo,sysssislog,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,dbo,ItemMarksFullView_TMP,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,dbo,__RefactorLog,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Examiner,ExaminerDetails,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,TMP_CandidateComponentMarkSet,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,TMP_ItemGroupMarkers,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,TMP_ItemMarks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,TMP_QuestionPaperItemGroups,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,ItemMarks,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,ItemMarks_archive,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,ItemMarks_RFC55421,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,ItemGroupMarkers,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,ItemGroupMarkers_archive,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,ItemGroupMarkers_RFC55421,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,QuestionPaperItemGroups,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,QuestionPaperItemGroups_archive,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,QuestionPaperItemGroups_RFC55421,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,MarkingModes,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,MessageLog,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,MessageLog_archive,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,MessageLog_RFC55421,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,CandidateComponentMarkSet,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,CandidateComponentMarkSet_archive,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,PIMRD,CandidateComponentMarkSet_RFC55421,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,AssessmentComponents,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,AssessmentVersions,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,CandidateCBInformationResponses,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,CandidateCBResponses,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,CertificateParts,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,CandidateNonCBResponses,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,OptionComponents,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,MarkSchemeItemTags,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,MarkSchemeMarkingClusters,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,MarkSchemes,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,MarkElements,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,MarkElementsAudit,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,MarkingClusters,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,QuestionPaperMarkingClusters,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,QuestionPapers,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,GradingOptionComponents,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,ItemTags,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,ComponentToleranceValues,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,CombinationSets,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,QuestionPapers,WorkingRawMarksAudit,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Report,ItemMarksSummary,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Report,ItemMarksFullView,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,QuestionPaperSessionAssessmentComponents,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,SAPSessionData,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,SessionAssessmentComponents,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,SessionCertificates,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,SessionGradingOptionThresholds,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,SessionMarkers,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,SessionOptionThresholds,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,Sessions,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,Session,CombinationSetParts,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,Candidates,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,CandidatesAudit,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,CentreInfo,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,CentreInfo_BKP,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,Centres,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,AggregationResultStatus,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,CandidateInfo,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,BusinessStreams,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,BusinessStreamSourceSystem,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,ReasonManualGradeChange,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,RemarkReasons,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,MarkingMethods,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,MarkerTypes,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,MarkingModes,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,Persons,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,KeyedBatchReason,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,MalpracticeReferenceItems,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,ComponentClasses,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,ESMApplicationType,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,ExceptionStatusTypes,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,Genders,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,UciTypes,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,QualificationGrades,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,QualificationGradeSets,TABLE,,ODS_SQL_SSIS,108
+SQLS,,ODS_WH,StaticData,Qualifications,TABLE,,ODS_SQL_SSIS,108
+SQLS,,VODS_WH,dbo,CandidateCodes,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_ASP,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_AssessmentEvent,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_AchievableAvailability,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_AvailabilityWindow,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_CandEntryAdditionalDetail,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_Candidate,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_CandidateEntry,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_CandidateEntryCase,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_Case,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_CATimeZone,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_Centre,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_CentreCentreRelationship,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_CentreCentreRelationshipType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_Country,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_PersonDetail,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_ResultsDeliveryPriority,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_ResultsReadiness,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,ECC,WH_ScheduleDate,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,EDI,WH_CandidateResponse,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,EDI,WH_CandidateEntry,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_CandidateEntry,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_CalculationBlock,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_CalculationBlockAddtlDetail,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_CalculationBlockHierarchy,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_CandidateMeasure,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_CandidateMeasureAdjuster,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_AwardingOrganisation,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_AchievableFamily,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_AchievableHierarchy,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_AdjustmentValueType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_AnswerBooklet,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_AssessmentEvent,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_Achievable,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_LibsItemMapping,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureAdjuster,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureAvailabilityStatus,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDef,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefSet,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefSetMember,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefSetStatus,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefSource,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefSubType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefTag,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefTagType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefTreeMember,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureDefType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureReason,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureScaleType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureScaleValue,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_MeasureScaleValueSet,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_ConversionThreshold,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_ConversionThresholdSet,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_ConvThresholdContextType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_DeliveryMethod,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_RecipeBlock,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_RecipeBlockStatus,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_RejectedMarkingModeMeasure,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_SittingTimePeriodType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_TargetResultType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_TestInstance,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_TestInstanceSet,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_TestInstanceSetMember,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_ResultsTargetSystem,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_ResultTransfer,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_ResultTransferStatus,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,HANA,WH_RoundingType,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_QTI_INTERACTIONOPTIONS,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_QTI_OBJECTTYPES,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_QTI_RESPONSEDECLARATION,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_RESPONSE,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_RESPONSE_BACKUP_BEFORE_NEWPK,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_RESPONSE_METADATA,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_RESPONSE_METADATA_REFACTORED,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Results_resuMarkSenttoIns,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Results_resuRecResfrIns,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Results_resuSAPPubFlag,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Results_resuSendToSap,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_IRT_VALUE,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_ITEM_STATS,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_LOFT_GRADETABLES,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_LOFT_INFO,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_LOFT_ITEMS,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markParRes,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markParResMod,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markParResModPart,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markPubRes,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markPubResMod,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markPubResModPart,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_markRecAbNot,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksReceived,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksServiceRecDSMC,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksServiceRecDSMCModules,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksServiceRecELIT,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksServiceRecELITModules,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksServiceRecRMA,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_marksServiceRecRMAModules,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_WritingSubmission,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Marking_WritingSubmission_modules,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Booking_CandidateBooking,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Booking_CandidateEntry,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Booking_CandidateModuleEntries,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Booking_CandidateModules,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Booking_TestEvent,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_Booking_TestModules,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,INSPERA,WH_CONTENT,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,TELEFORM,WH_CandidateInformationSheet,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,TELEFORM,WH_CandidateInfoSheetDetail,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,TELEFORM,WH_CandEntryAdditionalDetail,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,TELEFORM,WH_CandidateEntry,TABLE,,VODS_Microsoft_SQL,106
+SQLS,,VODS_WH,TELEFORM,WH_CandidateResponse,TABLE,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_AchievableAvailability,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_ASP,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_AssessmentEvent,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_AvailabilityWindow,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_CandEntryAdditionalDetail,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_Candidate,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_CandidateEntry,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_CandidateEntryCase,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_ResultsDeliveryPriority,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_ResultsReadiness,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_ScheduleDate,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_Case,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_CATimeZone,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_Centre,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_CentreCentreRelationship,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_CentreCentreRelationshipType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_Country,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,ECC,WHV_PersonDetail,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,EDI,WHV_CandidateResponse,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,EDI,WHV_CandidateEntry,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_CandidateEntry,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_CandidateMeasure,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_CandidateMeasureAdjuster,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_CalculationBlock,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_CalculationBlockHierarchy,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_AwardingOrganisation,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_AssessmentEvent,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureAdjuster,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureAvailabilityStatus,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDef,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefSet,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefSetMember,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefSetStatus,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefSource,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefSubType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefTag,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefTagType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefTreeMember,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureDefType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureReason,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureScaleType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureScaleValue,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_MeasureScaleValueSet,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_AchievableFamily,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_AchievableHierarchy,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_AdjustmentValueType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_AnswerBooklet,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_Achievable,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_RecipeBlock,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_RecipeBlockStatus,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_DeliveryMethod,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_LibsItemMapping,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_ConversionThreshold,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_ConversionThresholdSet,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_ConvThresholdContextType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_SittingTimePeriodType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_TestInstance,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_TestInstanceSet,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_TestInstanceSetMember,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_ResultsTargetSystem,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_ResultTransfer,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_ResultTransferStatus,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,HANA,WHV_RoundingType,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,INSPERA,WHV_Marking_markServRecDSMCMod,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,INSPERA,WHV_Marking_markServRecELITMod,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,INSPERA,WHV_Marking_markServRecRMAMod,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,INSPERA,WHV_Marking_WritSubmMod,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,INSPERA,WHV_Booking_CandidateModuleEnt,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,TELEFORM,WHV_CandEntryAdditionalDetail,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,TELEFORM,WHV_CandidateInformationSheet,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,TELEFORM,WHV_CandidateInfoSheetDetail,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,TELEFORM,WHV_CandidateEntry,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ001\SQL01,VODS_WH,TELEFORM,WHV_CandidateResponse,VIEW,,VODS_Microsoft_SQL,106
+SQLS,SPODSSQ005\SQL01,ODS_WH,Admin,usp_TableSpaceUsed,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,usp_UpdateStatitics,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,fn_diagramobjects,SQL_SCALAR_FUNCTION,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,PIMRD_MessageLog_NOXML,VIEW,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_alterdiagram,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_creatediagram,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_dropdiagram,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_helpdiagramdefinition,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_helpdiagrams,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_renamediagram,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_ssis_addlogentry,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,dbo,sp_upgraddiagrams,SQL_STORED_PROCEDURE,microsoft_database_tools_support: 1;,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,processProvisionalItemMarks,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,purgeProvisionalItemMarks,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,getCcms,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,getIgm,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,getIm,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,getQpig,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,destructureCcms,SQL_TABLE_VALUED_FUNCTION,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,destructureIgm,SQL_TABLE_VALUED_FUNCTION,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,destructureIm,SQL_TABLE_VALUED_FUNCTION,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,destructureQpig,SQL_TABLE_VALUED_FUNCTION,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,destructureSac,SQL_TABLE_VALUED_FUNCTION,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,PIMRD,insertProvisionalItemMarks,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,Report,updateItemMarks,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,Report,updateItemMarksDelete,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,Report,updateItemMarksInsert,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,Report,updateReportViews,SQL_STORED_PROCEDURE,,ODS_SQL_SSIS,108
+SQLS,SPODSSQ005\SQL01,ODS_WH,Session,Sac,VIEW,"MS_DiagramPane1: [0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
+Begin DesignProperties = 
+   Begin PaneConfigurations = 
+      Begin PaneConfiguration = 0
+         NumPanes = 4
+         Configuration = ""(H (1[40] 4[20] 2[20] 3) )""
+      End
+      Begin PaneConfiguration = 1
+         NumPanes = 3
+         Configuration = ""(H (1 [50] 4 [25] 3))""
+      End
+      Begin PaneConfiguration = 2
+         NumPanes = 3
+         Configuration = ""(H (1 [50] 2 [25] 3))""
+      End
+      Begin PaneConfiguration = 3
+         NumPanes = 3
+         Configuration = ""(H (4 [30] 2 [40] 3))""
+      End
+      Begin PaneConfiguration = 4
+         NumPanes = 2
+         Configuration = ""(H (1 [56] 3))""
+      End
+      Begin PaneConfiguration = 5
+         NumPanes = 2
+         Configuration = ""(H (2 [66] 3))""
+      End
+      Begin PaneConfiguration = 6
+         NumPanes = 2
+         Configuration = ""(H (4 [50] 3))""
+      End
+      Begin PaneConfiguration = 7
+         NumPanes = 1
+         Configuration = ""(V (3))""
+      End
+      Begin PaneConfiguration = 8
+         NumPanes = 3
+         Configuration = ""(H (1[56] 4[18] 2) )""
+      End
+      Begin PaneConfiguration = 9
+         NumPanes = 2
+         Configuration = ""(H (1 [75] 4))""
+      End
+      Begin PaneConfiguration = 10
+         NumPanes = 2
+         Configuration = ""(H (1[66] 2) )""
+      End
+      Begin PaneConfiguration = 11
+         NumPanes = 2
+         Configuration = ""(H (4 [60] 2))""
+      End
+      Begin PaneConfiguration = 12
+         NumPanes = 1
+         Configuration = ""(H (1) )""
+      End
+      Begin PaneConfiguration = 13
+         NumPanes = 1
+         Configuration = ""(V (4))""
+      End
+      Begin PaneConfiguration = 14
+         NumPanes = 1
+         Configuration = ""(V (2))""
+      End
+      ActivePaneConfig = 0
+   End
+   Begin DiagramPane = 
+      Begin Origin = 
+         Top = 0
+         Left = 0
+      End
+      Begin Tables = 
+         Begin Table = ""SessionAssessmentComponents (Session)""
+            Begin Extent = 
+               Top = 6
+               Left = 38
+               Bottom = 245
+               Right = 303
+            End
+            DisplayFlags = 280
+            TopColumn = 0
+         End
+         Begin Table = ""AssessmentComponents (QuestionPapers)""
+            Begin Extent = 
+               Top = 6
+               Left = 341
+               Bottom = 251
+               Right = 577
+            End
+            DisplayFlags = 280
+            TopColumn = 1
+         End
+      End
+   End
+   Begin SQLPane = 
+   End
+   Begin DataPane = 
+      Begin ParameterDefaults = """"
+      End
+   End
+   Begin CriteriaPane = 
+      Begin ColumnWidths = 11
+         Column = 1440
+         Alias = 900
+         Table = 1170
+         Output = 720
+         Append = 1400
+         NewValue = 1170
+         SortType = 1350
+         SortOrder = 1410
+         GroupBy = 1350
+         Filter = 1350
+         Or = 1350
+         Or = 1350
+         Or = 1350
+      End
+   End
+End
+; MS_DiagramPaneCount: 1;",ODS_SQL_SSIS,108
