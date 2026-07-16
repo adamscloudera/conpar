@@ -16,10 +16,11 @@ function resolvedValues(result: MappingResult): { serverName: string; databaseNa
       schemaName: result.selectedCandidate.schemaName,
     }
   }
+  const sentinel = (v: string) => (v === '-1' ? '' : v)
   return {
     serverName: result.templateRow.serverName,
-    databaseName: result.templateRow.databaseName,
-    schemaName: result.templateRow.schemaName,
+    databaseName: sentinel(result.templateRow.databaseName),
+    schemaName: sentinel(result.templateRow.schemaName),
   }
 }
 
