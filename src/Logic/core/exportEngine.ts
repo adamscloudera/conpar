@@ -27,7 +27,7 @@ function resolvedValues(result: MappingResult): { serverName: string; databaseNa
 export function exportTemplate(
   results: MappingResult[],
   templateType: TemplateType,
-  originalFilename: string,
+  originalFile: File,
 ): void {
   const pathKey = templateType === 'REPORT' ? 'Report Path' : 'Folder Path'
 
@@ -44,10 +44,16 @@ export function exportTemplate(
     }
   })
 
-  const ws = XLSX.utils.json_to_sheet(rows)
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
-
-  const base = originalFilename.replace(/\.[^.]+$/, '').replace(/_populated$/, '')
-  XLSX.writeFile(wb, `${base}_populated.xlsx`)
+  // Re-read the original file so the exported workbook retains Octopai's
+  // metadata (Author: "Kendo UI", AppVersion, etc.) which the tenant
+  // import validator checks.
+  const fileReader = new FileReader()
+  fileReader.onload = (e) => {
+    const data = new Uint8Array(e.target!.result as ArrayBuffer)
+    const wb = XLSX.read(data, { type: 'array' })
+    wb.Sheets['Sheet1'] = XLSX.utils.json_to_sheet(rows)
+    const base = originalFile.name.replace(/\.[^.]+$/, '').replace(/_populated$/, '')
+    XLSX.writeFile(wb, `${base}_populated.xlsx`)
+  }
+  fileReader.readAsArrayBuffer(originalFile)
 }

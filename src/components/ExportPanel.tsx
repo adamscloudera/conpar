@@ -15,7 +15,7 @@ export function ExportPanel() {
   const noMatch = results.filter((r) => r.status === 'no_match').length
 
   function doExport() {
-    exportTemplate(results, templateType!, templateFile!.name)
+    exportTemplate(results, templateType!, templateFile!)
   }
 
   return (
