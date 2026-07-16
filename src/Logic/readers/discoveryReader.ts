@@ -1,6 +1,17 @@
 import Papa from 'papaparse'
 import type { DiscoveryFile, DiscoveryFileType, ImpalaColumnsRow, LineageRow } from '../../types.ts'
 
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
 const IMPALA_COLUMNS_HEADERS = new Set([
   'Database Name',
   'Schema Name',
@@ -69,7 +80,7 @@ export function parseDiscoveryFile(file: File): Promise<DiscoveryFile> {
       if (format === 'lineage_map') {
         const lineageRows = parseLineageMap(rawResult.data as string[][])
         resolve({
-          id: crypto.randomUUID(),
+          id: generateId(),
           filename: file.name,
           type: 'lineage_map',
           rowCount: lineageRows.length,
@@ -80,7 +91,7 @@ export function parseDiscoveryFile(file: File): Promise<DiscoveryFile> {
         const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true })
         const impalaRows = parseImpalaColumns(parsed.data)
         resolve({
-          id: crypto.randomUUID(),
+          id: generateId(),
           filename: file.name,
           type: 'impala_columns',
           rowCount: impalaRows.length,
@@ -89,7 +100,7 @@ export function parseDiscoveryFile(file: File): Promise<DiscoveryFile> {
         })
       } else {
         resolve({
-          id: crypto.randomUUID(),
+          id: generateId(),
           filename: file.name,
           type: 'unknown',
           rowCount: rawResult.data.length,
