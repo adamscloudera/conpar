@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
 import { clsx } from 'clsx'
-import { login, queryAllAssets, queryLineage } from '../Logic/api/apiClient.ts'
+import type { LineageResponse } from '@adamscloudera/octopai-api'
+import { octopai } from '../Logic/api/octopaiApi.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
+import { computeInsightMetrics } from '../Logic/core/insightMetrics.ts'
 import { useApiStore } from '../stores/useApiStore.ts'
 import { useDiscoveryStore } from '../stores/useDiscoveryStore.ts'
+import { useInsightsStore } from '../stores/useInsightsStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
 
 function TokenExpiry({ expiry }: { expiry: string }) {
@@ -20,6 +23,7 @@ function TokenExpiry({ expiry }: { expiry: string }) {
 export function ApiConfigPanel() {
   const { templateType, connectionKeys } = useTemplateStore()
   const { addFile, files, removeFile } = useDiscoveryStore()
+  const { setMetrics, clearMetrics } = useInsightsStore()
   const {
     company, accessToken, accessExpiry, displayName, status, error,
     queryLog, fetchProgress,
@@ -33,6 +37,8 @@ export function ApiConfigPanel() {
   const [showLog, setShowLog] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const logEndRef = useRef<HTMLDivElement>(null)
+  // Controls the in-flight fetch so Disconnect (or a refetch) can cancel it.
+  const fetchAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (showLog && logEndRef.current) {
@@ -70,7 +76,7 @@ export function ApiConfigPanel() {
     setConfig(companyInput.trim())
     setStatus('connecting', null)
     try {
-      const resp = await login(companyInput.trim(), email, password)
+      const resp = await octopai.login(companyInput.trim(), email, password)
       setTokens({
         accessToken: resp.accessToken,
         accessExpiry: resp.expiration,
@@ -90,6 +96,11 @@ export function ApiConfigPanel() {
     setStatus('fetching', null)
     setShowLog(true)
 
+    // Fresh controller per fetch; abort supersedes any prior in-flight fetch.
+    fetchAbortRef.current?.abort()
+    const controller = new AbortController()
+    fetchAbortRef.current = controller
+
     const existing = files.find((f) => f.type === 'api_lookup')
     if (existing) removeFile(existing.id)
 
@@ -98,9 +109,9 @@ export function ApiConfigPanel() {
       const assetsStart = Date.now()
       setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: 0, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
 
-      const assets = await queryAllAssets(company, accessToken, (fetched) => {
+      const assets = await octopai.queryAllAssets(company, accessToken, (fetched) => {
         setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: fetched, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
-      })
+      }, controller.signal)
 
       logEntry('ok', `Assets API: ${assets.length.toLocaleString()} assets retrieved`)
 
@@ -119,7 +130,7 @@ export function ApiConfigPanel() {
       let lineageDone = 0
       const lineageResults = await Promise.allSettled(
         assetKeys.map(async (key) => {
-          const result = await queryLineage(company, accessToken, key)
+          const result = await octopai.queryLineage(company, accessToken, key, 2, controller.signal)
           lineageDone++
           setFetchProgress({ phase: 'lineage', assetsStartedAt: assetsStart, assetsTotal: assets.length, lineageDone, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
           return result
@@ -128,6 +139,8 @@ export function ApiConfigPanel() {
 
       const lineageNodes = lineageResults
         .flatMap((r) => (r.status === 'fulfilled' ? r.value.nodes : []))
+      const lineageLinks = lineageResults
+        .flatMap((r) => (r.status === 'fulfilled' ? r.value.links : []))
       const lineageFailed = lineageResults.filter((r) => r.status === 'rejected').length
 
       if (lineageFailed > 0) {
@@ -135,12 +148,34 @@ export function ApiConfigPanel() {
       }
       logEntry('ok', `Lineage complete: ${assetKeys.length - lineageFailed}/${assetKeys.length} keys, ${lineageNodes.length} nodes`)
 
+      // Bail before touching the store if this fetch was cancelled or superseded
+      // by a newer one — otherwise a mid-fetch Disconnect leaves stale metrics
+      // and an api_lookup file behind after the session was cleared.
+      if (controller.signal.aborted || fetchAbortRef.current !== controller) {
+        setFetchProgress(null)
+        return
+      }
+
       const file = assetsToDiscoveryFile(assets, lineageNodes, `API — ${company}`)
       logEntry('ok', `Injected ${file.rowCount.toLocaleString()} rows as discovery source`)
       addFile(file)
       setFetchProgress(null)
       setStatus('done', null)
+      const lineageDepths = lineageResults
+        .filter((r): r is PromiseFulfilledResult<LineageResponse> => r.status === 'fulfilled')
+        .map((r) => r.value.depth)
+      const fetchDurationSeconds = Math.round((Date.now() - assetsStart) / 1000)
+      const insights = computeInsightMetrics(
+        company, assets, lineageLinks, lineageNodes, assetKeys.length, new Date().toISOString(),
+        lineageDepths, fetchDurationSeconds,
+      )
+      setMetrics(insights)
     } catch (err) {
+      // A deliberate cancel (Disconnect / refetch) is not an error state.
+      if (controller.signal.aborted) {
+        setFetchProgress(null)
+        return
+      }
       const msg = err instanceof Error ? err.message : String(err)
       logEntry('error', msg)
       setFetchProgress(null)
@@ -264,7 +299,7 @@ export function ApiConfigPanel() {
           {status === 'fetching' ? 'Fetching…' : status === 'done' ? 'Refetch' : 'Fetch from API'}
         </button>
 
-        <button onClick={clearSession} className="btn-ghost">
+        <button onClick={() => { fetchAbortRef.current?.abort(); clearSession(); clearMetrics() }} className="btn-ghost">
           <LogOut className="w-4 h-4" />
           Disconnect
         </button>

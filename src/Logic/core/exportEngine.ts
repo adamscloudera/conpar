@@ -51,7 +51,13 @@ export function exportTemplate(
   fileReader.onload = (e) => {
     const data = new Uint8Array(e.target!.result as ArrayBuffer)
     const wb = XLSX.read(data, { type: 'array' })
-    wb.Sheets['Sheet1'] = XLSX.utils.json_to_sheet(rows)
+    // Write into the template's actual first sheet, whatever its name. XLSX only
+    // serializes sheets listed in SheetNames, so keying on a hardcoded 'Sheet1'
+    // silently produced the original unpopulated template when the sheet was
+    // named anything else. Mirror templateReader's wb.SheetNames[0] behavior.
+    const sheetName = wb.SheetNames[0] ?? 'Sheet1'
+    if (!wb.SheetNames.includes(sheetName)) wb.SheetNames.push(sheetName)
+    wb.Sheets[sheetName] = XLSX.utils.json_to_sheet(rows)
     const base = originalFile.name.replace(/\.[^.]+$/, '').replace(/_populated$/, '')
     XLSX.writeFile(wb, `${base}_populated.xlsx`)
   }

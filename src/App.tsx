@@ -4,6 +4,7 @@ import { TemplateUploadPanel } from './components/TemplateUploadPanel.tsx'
 import { SuggestionsPanel } from './components/SuggestionsPanel.tsx'
 import { DiscoveryUploadPanel } from './components/DiscoveryUploadPanel.tsx'
 import { ApiConfigPanel } from './components/ApiConfigPanel.tsx'
+import { InsightsPanel } from './components/InsightsPanel.tsx'
 import { MappingGrid } from './components/MappingGrid.tsx'
 import { StatsPanel } from './components/StatsPanel.tsx'
 import { ExportPanel } from './components/ExportPanel.tsx'
@@ -112,6 +113,7 @@ export default function App() {
             <TemplateUploadPanel />
             <SuggestionsPanel />
             <ApiConfigPanel />
+            <InsightsPanel />
             <DiscoveryUploadPanel />
             <StatsPanel />
             <MappingGrid />

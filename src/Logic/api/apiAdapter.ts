@@ -1,4 +1,4 @@
-import type { AssetItem, LineageNode } from './apiClient.ts'
+import type { AssetItem, LineageNode } from '@adamscloudera/octopai-api'
 import type { DiscoveryFile, ImpalaColumnsRow } from '../../types.ts'
 
 function generateId(): string {
