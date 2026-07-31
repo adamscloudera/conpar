@@ -60,7 +60,7 @@ export function ApiConfigPanel() {
     if (existing) removeFile(existing.id)
 
     try {
-      const assets = await queryAllAssets(company, accessToken, connectionKeys)
+      const assets = await queryAllAssets(company, accessToken)
 
       // Phase 2: collect lineage nodes for the first asset key from each
       // unique connection — gives the matching engine richer schema/table context

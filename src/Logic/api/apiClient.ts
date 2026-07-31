@@ -83,19 +83,20 @@ export async function login(company: string, username: string, password: string)
 export async function queryAssets(
   company: string,
   token: string,
-  connectionIds: string[],
   limit = 10000,
 ): Promise<AssetsQueryResponse> {
-  return apiPost<AssetsQueryResponse>(company, '/api/v2.0/assets/query', { ConnectionIds: connectionIds, limit, assetType: 2 }, token)
+  // ConnectionIds in the API expects numeric Octopai connection IDs, not the
+  // string keys from templates. Query without that filter; matching engine
+  // handles relevance scoring against the returned asset list.
+  return apiPost<AssetsQueryResponse>(company, '/api/v2.0/assets/query', { limit, assetType: 2 }, token)
 }
 
 export async function queryAllAssets(
   company: string,
   token: string,
-  connectionIds: string[],
 ): Promise<AssetItem[]> {
   const all: AssetItem[] = []
-  const first = await queryAssets(company, token, connectionIds)
+  const first = await queryAssets(company, token)
   all.push(...first.items)
 
   if (first.hasMore && first.cursorId) {
