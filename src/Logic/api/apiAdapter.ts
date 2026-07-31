@@ -10,9 +10,15 @@ function generateId(): string {
 }
 
 function assetToRow(item: AssetItem | LineageNode): ImpalaColumnsRow {
+  const databaseName = item.databaseName ?? ''
+  const schemaName = item.schemaName ?? ''
+  // When neither databaseName nor schemaName is populated the matching engine's
+  // groupKey check would silently discard the row. Fall back to connectionName
+  // so the row participates in token-based scoring against the template.
+  const effectiveDb = databaseName || (!schemaName ? (item.connectionName ?? '') : '')
   return {
-    databaseName: item.databaseName ?? '',
-    schemaName: item.schemaName ?? '',
+    databaseName: effectiveDb,
+    schemaName,
     objectName: item.objectName ?? '',
     objectType: item.objectType ?? '',
     columnName: '',
