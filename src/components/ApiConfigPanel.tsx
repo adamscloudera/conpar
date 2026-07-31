@@ -31,6 +31,7 @@ export function ApiConfigPanel() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showLog, setShowLog] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
   const logEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,6 +39,20 @@ export function ApiConfigPanel() {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [queryLog.length, showLog])
+
+  // Live elapsed-time ticker — resets when phase transitions, clears when fetch ends.
+  useEffect(() => {
+    if (!fetchProgress) { setElapsed(0); return }
+    const startedAt = fetchProgress.phase === 'assets'
+      ? fetchProgress.assetsStartedAt
+      : fetchProgress.lineageStartedAt
+    setElapsed(Math.floor((Date.now() - startedAt) / 1000))
+    const id = setInterval(
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    )
+    return () => clearInterval(id)
+  }, [fetchProgress?.phase, fetchProgress?.assetsStartedAt, fetchProgress?.lineageStartedAt])
 
   if (!templateType) return null
 
@@ -79,11 +94,12 @@ export function ApiConfigPanel() {
     if (existing) removeFile(existing.id)
 
     try {
-      logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=10000`)
-      setFetchProgress({ phase: 'assets', assetsTotal: 0, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
+      logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=1000/page`)
+      const assetsStart = Date.now()
+      setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: 0, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
 
       const assets = await queryAllAssets(company, accessToken, (fetched) => {
-        setFetchProgress({ phase: 'assets', assetsTotal: fetched, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
+        setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: fetched, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
       })
 
       logEntry('ok', `Assets API: ${assets.length.toLocaleString()} assets retrieved`)
@@ -98,14 +114,14 @@ export function ApiConfigPanel() {
       logEntry('info', `Lineage API: enriching ${assetKeys.length} unique keys (depth=2)`)
 
       const lineageStart = Date.now()
-      setFetchProgress({ phase: 'lineage', assetsTotal: assets.length, lineageDone: 0, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
+      setFetchProgress({ phase: 'lineage', assetsStartedAt: assetsStart, assetsTotal: assets.length, lineageDone: 0, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
 
       let lineageDone = 0
       const lineageResults = await Promise.allSettled(
         assetKeys.map(async (key) => {
           const result = await queryLineage(company, accessToken, key)
           lineageDone++
-          setFetchProgress({ phase: 'lineage', assetsTotal: assets.length, lineageDone, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
+          setFetchProgress({ phase: 'lineage', assetsStartedAt: assetsStart, assetsTotal: assets.length, lineageDone, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
           return result
         })
       )
@@ -261,30 +277,38 @@ export function ApiConfigPanel() {
             <>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted">Phase 1: Fetching assets</span>
-                <span className="font-mono text-foreground">
-                  {fetchProgress.assetsTotal.toLocaleString()} objects retrieved
+                <span className="font-mono text-foreground flex items-center gap-2">
+                  {fetchProgress.assetsTotal > 0
+                    ? `${fetchProgress.assetsTotal.toLocaleString()} objects retrieved`
+                    : <span className="text-muted italic">connecting…</span>
+                  }
+                  <span className="text-muted tabular-nums">{elapsed}s</span>
                 </span>
               </div>
+              {fetchProgress.assetsTotal === 0 && elapsed > 5 && (
+                <p className="text-xs text-amber-600 italic">Waiting for server response…</p>
+              )}
               <div className="h-1.5 rounded-full bg-border overflow-hidden">
                 <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
               </div>
             </>
           ) : (() => {
-            const elapsed = Date.now() - fetchProgress.lineageStartedAt
             const done = fetchProgress.lineageDone
             const total = fetchProgress.lineageTotal
             const pct = total > 0 ? (done / total) * 100 : 0
+            // elapsed is seconds since lineage phase started (from the live ticker)
             const etr = done >= 2 && done < total
-              ? Math.max(1, Math.round(((total - done) * elapsed) / done / 1000))
+              ? Math.max(1, Math.round((total - done) * elapsed / done))
               : null
             return (
               <>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted">Phase 2: Enriching lineage</span>
-                  <span className="font-mono text-foreground">
+                  <span className="font-mono text-foreground flex items-center gap-2">
                     {done}/{total}
+                    <span className="text-muted tabular-nums">{elapsed}s elapsed</span>
                     {etr !== null && (
-                      <span className="text-muted ml-1.5">~{etr}s left</span>
+                      <span className="text-muted">~{etr}s left</span>
                     )}
                   </span>
                 </div>

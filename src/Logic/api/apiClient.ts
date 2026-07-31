@@ -52,26 +52,106 @@ function proxyUrl(path: string): string {
   return `/conpar/octopai-proxy${path}`
 }
 
-async function apiPost<T>(company: string, path: string, body: unknown, token?: string): Promise<T> {
+const REQUEST_TIMEOUT_MS = 60_000
+// Docs ceiling is 10,000; documented example uses 1,000 — use that as the default.
+const DEFAULT_PAGE_SIZE = 1000
+
+// Link an external AbortSignal into a local AbortController so a single
+// controller can merge both a timeout and caller-initiated cancellation.
+function linkSignal(controller: AbortController, external?: AbortSignal): void {
+  if (!external) return
+  if (external.aborted) {
+    controller.abort(external.reason)
+    return
+  }
+  external.addEventListener('abort', () => controller.abort(external.reason), { once: true })
+}
+
+async function apiPost<T>(
+  company: string,
+  path: string,
+  body: unknown,
+  token?: string,
+  signal?: AbortSignal,
+): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Octopai-Host': `${company}.octopai.com`,
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  let res: Response
+  const controller = new AbortController()
+  linkSignal(controller, signal)
+  // Timer stays armed through both header receipt and body streaming.
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
   try {
-    res = await fetch(proxyUrl(path), { method: 'POST', headers, body: JSON.stringify(body) })
+    const res = await fetch(proxyUrl(path), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`)
+    }
+
+    // await so that JSON parse errors are caught here and so the finally
+    // block does not fire until the body is fully streamed.
+    return await res.json() as T
   } catch (err) {
-    throw new Error(err instanceof TypeError ? 'Network error — could not reach the proxy.' : String(err))
+    if ((err as { name?: string })?.name === 'AbortError') {
+      if (signal?.aborted) throw new Error('Request cancelled.')
+      throw new Error(
+        `Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s — Octopai did not respond. ` +
+        `The tenant may be unavailable or the query returned too many assets.`,
+      )
+    }
+    if (err instanceof TypeError) throw new Error('Network error — could not reach the proxy.')
+    throw err
+  } finally {
+    clearTimeout(timer)
   }
+}
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`)
+async function scrollFetch(
+  company: string,
+  token: string,
+  cursor: string,
+  signal?: AbortSignal,
+): Promise<AssetsQueryResponse> {
+  const controller = new AbortController()
+  linkSignal(controller, signal)
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  try {
+    const res = await fetch(proxyUrl(`/api/v2.0/assets/query/scroll/${cursor}`), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Octopai-Host': `${company}.octopai.com`,
+      },
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Scroll HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`)
+    }
+
+    return await res.json() as AssetsQueryResponse
+  } catch (err) {
+    if ((err as { name?: string })?.name === 'AbortError') {
+      if (signal?.aborted) throw new Error('Asset fetch cancelled.')
+      throw new Error(`Scroll request timed out after ${REQUEST_TIMEOUT_MS / 1000}s.`)
+    }
+    if (err instanceof TypeError) throw new Error('Network error during scroll — could not reach the proxy.')
+    throw err
+  } finally {
+    clearTimeout(timer)
   }
-
-  return res.json() as Promise<T>
 }
 
 export async function login(company: string, username: string, password: string): Promise<LoginResponse> {
@@ -83,40 +163,35 @@ export async function login(company: string, username: string, password: string)
 export async function queryAssets(
   company: string,
   token: string,
-  limit = 10000,
+  limit = DEFAULT_PAGE_SIZE,
+  signal?: AbortSignal,
 ): Promise<AssetsQueryResponse> {
   // ConnectionIds in the API expects numeric Octopai connection IDs, not the
   // string keys from templates. Query without that filter; matching engine
   // handles relevance scoring against the returned asset list.
-  return apiPost<AssetsQueryResponse>(company, '/api/v2.0/assets/query', { limit, assetType: 2 }, token)
+  return apiPost<AssetsQueryResponse>(company, '/api/v2.0/assets/query', { limit, assetType: 2 }, token, signal)
 }
 
 export async function queryAllAssets(
   company: string,
   token: string,
   onProgress?: (fetched: number) => void,
+  signal?: AbortSignal,
 ): Promise<AssetItem[]> {
   const all: AssetItem[] = []
-  const first = await queryAssets(company, token)
+
+  const first = await queryAssets(company, token, DEFAULT_PAGE_SIZE, signal)
   all.push(...first.items)
   onProgress?.(all.length)
 
   if (first.hasMore && first.cursorId) {
-    let cursor = first.cursorId
+    let cursor: string | undefined = first.cursorId
     while (cursor) {
-      let res: Response
-      try {
-        res = await fetch(proxyUrl(`/api/v2.0/assets/query/scroll/${cursor}`), {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Octopai-Host': `${company}.octopai.com` },
-        })
-      } catch {
-        break
-      }
-      if (!res.ok) break
-      const page: AssetsQueryResponse = await res.json()
+      if (signal?.aborted) throw new Error('Asset fetch cancelled.')
+      const page = await scrollFetch(company, token, cursor, signal)
       all.push(...page.items)
       onProgress?.(all.length)
-      cursor = page.hasMore ? (page.cursorId ?? '') : ''
+      cursor = page.hasMore ? page.cursorId : undefined
     }
   }
 

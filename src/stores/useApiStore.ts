@@ -10,6 +10,7 @@ export type QueryLogEntry = {
 
 export type FetchProgress = {
   phase: 'assets' | 'lineage'
+  assetsStartedAt: number
   assetsTotal: number
   lineageDone: number
   lineageTotal: number
