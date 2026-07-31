@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
 import { clsx } from 'clsx'
 import { login, queryAllAssets, queryLineage } from '../Logic/api/apiClient.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
@@ -20,16 +20,34 @@ function TokenExpiry({ expiry }: { expiry: string }) {
 export function ApiConfigPanel() {
   const { templateType, connectionKeys } = useTemplateStore()
   const { addFile, files, removeFile } = useDiscoveryStore()
-  const { company, accessToken, accessExpiry, displayName, status, error, setConfig, setTokens, setStatus, clearSession } = useApiStore()
+  const {
+    company, accessToken, accessExpiry, displayName, status, error,
+    queryLog, fetchProgress,
+    setConfig, setTokens, setStatus, clearSession,
+    addQueryLog, setFetchProgress, clearFetchState,
+  } = useApiStore()
 
   const [companyInput, setCompanyInput] = useState(company)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showLog, setShowLog] = useState(false)
+  const logEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (showLog && logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [queryLog.length, showLog])
 
   if (!templateType) return null
 
   const isConnected = !!accessToken
   const isBusy = status === 'connecting' || status === 'fetching'
+
+  function logEntry(level: 'info' | 'ok' | 'error', message: string) {
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false })
+    addQueryLog({ ts, level, message })
+  }
 
   async function handleConnect(e: React.FormEvent) {
     e.preventDefault()
@@ -53,34 +71,64 @@ export function ApiConfigPanel() {
 
   async function handleFetch() {
     if (!accessToken || !connectionKeys.length) return
+    clearFetchState()
     setStatus('fetching', null)
+    setShowLog(true)
 
-    // Remove any existing api_lookup file to avoid stacking stale results
     const existing = files.find((f) => f.type === 'api_lookup')
     if (existing) removeFile(existing.id)
 
     try {
-      const assets = await queryAllAssets(company, accessToken)
+      logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=10000`)
+      setFetchProgress({ phase: 'assets', assetsTotal: 0, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
 
-      // Phase 2: collect lineage nodes for the first asset key from each
-      // unique connection — gives the matching engine richer schema/table context
+      const assets = await queryAllAssets(company, accessToken, (fetched) => {
+        setFetchProgress({ phase: 'assets', assetsTotal: fetched, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
+      })
+
+      logEntry('ok', `Assets API: ${assets.length.toLocaleString()} assets retrieved`)
+
+      // Deduplicate keys, cap at 20 to avoid rate limits in Phase 2
       const keysSeen = new Set<string>()
       const assetKeys = assets
         .filter((a) => { const k = a._key; if (!k || keysSeen.has(k)) return false; keysSeen.add(k); return true })
-        .slice(0, 20) // cap to avoid hitting rate limits in Phase 2
+        .slice(0, 20)
         .map((a) => a._key)
 
+      logEntry('info', `Lineage API: enriching ${assetKeys.length} unique keys (depth=2)`)
+
+      const lineageStart = Date.now()
+      setFetchProgress({ phase: 'lineage', assetsTotal: assets.length, lineageDone: 0, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
+
+      let lineageDone = 0
       const lineageResults = await Promise.allSettled(
-        assetKeys.map((key) => queryLineage(company, accessToken, key))
+        assetKeys.map(async (key) => {
+          const result = await queryLineage(company, accessToken, key)
+          lineageDone++
+          setFetchProgress({ phase: 'lineage', assetsTotal: assets.length, lineageDone, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
+          return result
+        })
       )
+
       const lineageNodes = lineageResults
         .flatMap((r) => (r.status === 'fulfilled' ? r.value.nodes : []))
+      const lineageFailed = lineageResults.filter((r) => r.status === 'rejected').length
+
+      if (lineageFailed > 0) {
+        logEntry('error', `Lineage: ${lineageFailed}/${assetKeys.length} keys failed`)
+      }
+      logEntry('ok', `Lineage complete: ${assetKeys.length - lineageFailed}/${assetKeys.length} keys, ${lineageNodes.length} nodes`)
 
       const file = assetsToDiscoveryFile(assets, lineageNodes, `API — ${company}`)
+      logEntry('ok', `Injected ${file.rowCount.toLocaleString()} rows as discovery source`)
       addFile(file)
+      setFetchProgress(null)
       setStatus('done', null)
     } catch (err) {
-      setStatus('error', err instanceof Error ? err.message : String(err))
+      const msg = err instanceof Error ? err.message : String(err)
+      logEntry('error', msg)
+      setFetchProgress(null)
+      setStatus('error', msg)
     }
   }
 
@@ -206,9 +254,56 @@ export function ApiConfigPanel() {
         </button>
       </div>
 
-      {apiFile && (
+      {/* Progress indicator — shown while fetching */}
+      {fetchProgress && (
+        <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border/60">
+          {fetchProgress.phase === 'assets' ? (
+            <>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Phase 1: Fetching assets</span>
+                <span className="font-mono text-foreground">
+                  {fetchProgress.assetsTotal.toLocaleString()} objects retrieved
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-border overflow-hidden">
+                <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
+              </div>
+            </>
+          ) : (() => {
+            const elapsed = Date.now() - fetchProgress.lineageStartedAt
+            const done = fetchProgress.lineageDone
+            const total = fetchProgress.lineageTotal
+            const pct = total > 0 ? (done / total) * 100 : 0
+            const etr = done >= 2 && done < total
+              ? Math.max(1, Math.round(((total - done) * elapsed) / done / 1000))
+              : null
+            return (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Phase 2: Enriching lineage</span>
+                  <span className="font-mono text-foreground">
+                    {done}/{total}
+                    {etr !== null && (
+                      <span className="text-muted ml-1.5">~{etr}s left</span>
+                    )}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-300"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      )}
+
+      {/* Summary after done */}
+      {status === 'done' && apiFile && !fetchProgress && (
         <p className="text-xs text-muted">
-          Fetched {apiFile.rowCount} assets from {company}.octopai.com — injected as discovery source
+          {apiFile.rowCount.toLocaleString()} assets fetched from {company}.octopai.com — injected as discovery source
         </p>
       )}
 
@@ -224,6 +319,38 @@ export function ApiConfigPanel() {
           <AlertCircle className="w-4 h-4 shrink-0" />
           No connection keys found in template — load a template first
         </p>
+      )}
+
+      {/* Query log */}
+      {queryLog.length > 0 && (
+        <div className="space-y-1.5">
+          <button
+            onClick={() => setShowLog((v) => !v)}
+            className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
+          >
+            <ChevronDown className={clsx('w-3.5 h-3.5 transition-transform duration-150', showLog && 'rotate-180')} />
+            Query log ({queryLog.length} {queryLog.length === 1 ? 'entry' : 'entries'})
+          </button>
+          {showLog && (
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-card p-2 space-y-0.5 font-mono text-[11px]">
+              {queryLog.map((entry, i) => (
+                <div
+                  key={i}
+                  className={clsx(
+                    'flex gap-2',
+                    entry.level === 'error' && 'text-red-600',
+                    entry.level === 'ok' && 'text-green-700 dark:text-green-500',
+                    entry.level === 'info' && 'text-muted',
+                  )}
+                >
+                  <span className="shrink-0 opacity-60">{entry.ts}</span>
+                  <span>{entry.message}</span>
+                </div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

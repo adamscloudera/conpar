@@ -94,10 +94,12 @@ export async function queryAssets(
 export async function queryAllAssets(
   company: string,
   token: string,
+  onProgress?: (fetched: number) => void,
 ): Promise<AssetItem[]> {
   const all: AssetItem[] = []
   const first = await queryAssets(company, token)
   all.push(...first.items)
+  onProgress?.(all.length)
 
   if (first.hasMore && first.cursorId) {
     let cursor = first.cursorId
@@ -113,6 +115,7 @@ export async function queryAllAssets(
       if (!res.ok) break
       const page: AssetsQueryResponse = await res.json()
       all.push(...page.items)
+      onProgress?.(all.length)
       cursor = page.hasMore ? (page.cursorId ?? '') : ''
     }
   }

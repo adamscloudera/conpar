@@ -2,6 +2,20 @@ import { create } from 'zustand'
 
 export type ApiStatus = 'idle' | 'connecting' | 'connected' | 'fetching' | 'done' | 'error'
 
+export type QueryLogEntry = {
+  ts: string
+  level: 'info' | 'ok' | 'error'
+  message: string
+}
+
+export type FetchProgress = {
+  phase: 'assets' | 'lineage'
+  assetsTotal: number
+  lineageDone: number
+  lineageTotal: number
+  lineageStartedAt: number
+} | null
+
 type ApiStore = {
   company: string
   accessToken: string
@@ -11,6 +25,8 @@ type ApiStore = {
   displayName: string
   status: ApiStatus
   error: string | null
+  queryLog: QueryLogEntry[]
+  fetchProgress: FetchProgress
 
   setConfig: (company: string) => void
   setTokens: (params: {
@@ -22,6 +38,9 @@ type ApiStore = {
   }) => void
   setStatus: (status: ApiStatus, error?: string | null) => void
   clearSession: () => void
+  addQueryLog: (entry: QueryLogEntry) => void
+  setFetchProgress: (progress: FetchProgress) => void
+  clearFetchState: () => void
 }
 
 export const useApiStore = create<ApiStore>((set) => ({
@@ -33,6 +52,8 @@ export const useApiStore = create<ApiStore>((set) => ({
   displayName: '',
   status: 'idle',
   error: null,
+  queryLog: [],
+  fetchProgress: null,
 
   setConfig: (company) => set({ company }),
 
@@ -50,5 +71,11 @@ export const useApiStore = create<ApiStore>((set) => ({
       displayName: '',
       status: 'idle',
       error: null,
+      queryLog: [],
+      fetchProgress: null,
     }),
+
+  addQueryLog: (entry) => set((s) => ({ queryLog: [...s.queryLog, entry] })),
+  setFetchProgress: (fetchProgress) => set({ fetchProgress }),
+  clearFetchState: () => set({ queryLog: [], fetchProgress: null }),
 }))
