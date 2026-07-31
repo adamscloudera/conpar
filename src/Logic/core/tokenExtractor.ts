@@ -18,7 +18,8 @@ export function extractPathTokens(path: string): string[] {
   const seen = new Set<string>()
   const tokens: string[] = []
   for (const seg of segments) {
-    const parts = seg.split(/[_\s\-]+/)
+    const segNoExt = seg.replace(/\.[a-zA-Z][a-zA-Z0-9]*$/, '')
+    const parts = segNoExt.split(/[_\s\-]+/)
     for (const p of parts) {
       const t = canonicalToken(p)
       if (t.length < MIN_TOKEN_LEN) continue
