@@ -199,7 +199,7 @@ export function computeMappings(
     for (const file of discoveryFiles) {
       if (file.type === 'lineage_map') {
         allCandidates.push(...candidatesFromLineageMap(row, file, pathTokens))
-      } else if (file.type === 'impala_columns') {
+      } else if (file.type === 'impala_columns' || file.type === 'api_lookup') {
         allCandidates.push(...candidatesFromImpalaColumns(row, file, pathTokens))
       }
     }

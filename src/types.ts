@@ -29,7 +29,7 @@ export type ImpalaColumnsRow = {
   connectionId: string;
 };
 
-export type DiscoveryFileType = 'lineage_map' | 'impala_columns' | 'unknown';
+export type DiscoveryFileType = 'lineage_map' | 'impala_columns' | 'api_lookup' | 'unknown';
 
 export type DiscoveryFile = {
   id: string;

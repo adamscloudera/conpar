@@ -3,6 +3,7 @@ import { InstructionsPanel } from './components/InstructionsPanel.tsx'
 import { TemplateUploadPanel } from './components/TemplateUploadPanel.tsx'
 import { SuggestionsPanel } from './components/SuggestionsPanel.tsx'
 import { DiscoveryUploadPanel } from './components/DiscoveryUploadPanel.tsx'
+import { ApiConfigPanel } from './components/ApiConfigPanel.tsx'
 import { MappingGrid } from './components/MappingGrid.tsx'
 import { StatsPanel } from './components/StatsPanel.tsx'
 import { ExportPanel } from './components/ExportPanel.tsx'
@@ -110,6 +111,7 @@ export default function App() {
           <div className="space-y-4">
             <TemplateUploadPanel />
             <SuggestionsPanel />
+            <ApiConfigPanel />
             <DiscoveryUploadPanel />
             <StatsPanel />
             <MappingGrid />
