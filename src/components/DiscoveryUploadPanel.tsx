@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { FileText, X, Plus, AlertCircle } from 'lucide-react'
+import { FileText, X, Plus, AlertCircle, ChevronDown } from 'lucide-react'
 import { clsx } from 'clsx'
 import { parseDiscoveryFile } from '../Logic/readers/discoveryReader.ts'
 import { useDiscoveryStore } from '../stores/useDiscoveryStore.ts'
@@ -8,6 +8,7 @@ import { useTemplateStore } from '../stores/useTemplateStore.ts'
 const FORMAT_LABELS: Record<string, string> = {
   lineage_map: 'Lineage Map',
   impala_columns: 'Impala Columns',
+  api_lookup: 'API Lookup',
   unknown: 'Unknown format',
 }
 
@@ -17,6 +18,7 @@ export function DiscoveryUploadPanel() {
   const [dragging, setDragging] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expandedFileId, setExpandedFileId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   if (!templateType) return null
@@ -54,26 +56,65 @@ export function DiscoveryUploadPanel() {
 
       {files.length > 0 && (
         <ul className="space-y-2">
-          {files.map((file) => (
-            <li key={file.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-gray-50">
-              <FileText className="w-4 h-4 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{file.filename}</p>
-                <div className="flex gap-2 mt-0.5">
-                  <span className={clsx('badge', file.type === 'unknown' ? 'badge-amber' : 'badge-blue')}>
-                    {FORMAT_LABELS[file.type]}
-                  </span>
-                  <span className="badge badge-gray">{file.rowCount} rows</span>
+          {files.map((file) => {
+            const isExpanded = expandedFileId === file.id
+            const canExpand = file.impalaRows.length > 0
+            return (
+              <li key={file.id} className="rounded-xl border border-border bg-gray-50">
+                <div className="flex items-center gap-3 p-3">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{file.filename}</p>
+                    <div className="flex gap-2 mt-0.5">
+                      <span className={clsx('badge', file.type === 'unknown' ? 'badge-amber' : 'badge-blue')}>
+                        {FORMAT_LABELS[file.type]}
+                      </span>
+                      <span className="badge badge-gray">{file.rowCount} rows</span>
+                    </div>
+                  </div>
+                  {file.type === 'unknown' && (
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" aria-label="Format not recognised" />
+                  )}
+                  {canExpand && (
+                    <button
+                      onClick={() => setExpandedFileId(isExpanded ? null : file.id)}
+                      className="shrink-0 text-muted hover:text-foreground transition-colors"
+                      title={isExpanded ? 'Hide rows' : 'Show rows'}
+                    >
+                      <ChevronDown className={clsx('w-4 h-4 transition-transform duration-150', isExpanded && 'rotate-180')} />
+                    </button>
+                  )}
+                  <button onClick={() => removeFile(file.id)} className="shrink-0 text-muted hover:text-foreground transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              </div>
-              {file.type === 'unknown' && (
-                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" aria-label="Format not recognised" />
-              )}
-              <button onClick={() => removeFile(file.id)} className="shrink-0 text-muted hover:text-foreground transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </li>
-          ))}
+                {isExpanded && (
+                  <div className="border-t border-border/60 max-h-64 overflow-y-auto overflow-x-auto">
+                    <table className="w-full text-[11px] font-mono">
+                      <thead className="sticky top-0 bg-gray-100 border-b border-border/60">
+                        <tr>
+                          <th className="px-2 py-1 text-left font-semibold text-muted whitespace-nowrap">Connection</th>
+                          <th className="px-2 py-1 text-left font-semibold text-muted whitespace-nowrap">Database</th>
+                          <th className="px-2 py-1 text-left font-semibold text-muted whitespace-nowrap">Schema</th>
+                          <th className="px-2 py-1 text-left font-semibold text-muted whitespace-nowrap">Object</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {file.impalaRows.map((row, i) => (
+                          <tr key={i} className={clsx('border-b border-border/40 last:border-0', i % 2 === 0 ? 'bg-gray-50' : 'bg-white')}>
+                            <td className="px-2 py-0.5 text-muted">{row.connectionLogicName || '—'}</td>
+                            <td className="px-2 py-0.5">{row.databaseName || '—'}</td>
+                            <td className="px-2 py-0.5">{row.schemaName || '—'}</td>
+                            <td className="px-2 py-0.5">{row.objectName || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
 

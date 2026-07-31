@@ -51,6 +51,10 @@ export function StatsPanel() {
     if (f.type === 'lineage_map') {
       return `${f.filename}: ${f.rowCount} lineage rows`
     }
+    if (f.type === 'api_lookup') {
+      const distinctDbs = new Set(f.impalaRows.map((r) => r.databaseName).filter(Boolean))
+      return `${f.filename}: ${f.rowCount} API assets across ${distinctDbs.size} database${distinctDbs.size !== 1 ? 's' : ''}`
+    }
     return `${f.filename}: unrecognized format`
   })
 
