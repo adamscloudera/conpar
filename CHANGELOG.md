@@ -33,6 +33,9 @@ from the workspace code review.
 - `exportEngine.ts`: guard against an empty workbook — `wb.SheetNames[0] ??
   'Sheet1'` — instead of indexing `undefined` when no sheet exists.
 - `tokenExtractor.ts`: strip file extension before splitting path segments.
+- `ApiConfigPanel.tsx`: default lineage `nodes`/`links` to `[]` per response —
+  leaf-key lineage results omit these fields, and the raw `flatMap` spliced an
+  `undefined` element that crashed `computeInsightMetrics` (`reading 'from'`).
 
 **Build / serving**
 

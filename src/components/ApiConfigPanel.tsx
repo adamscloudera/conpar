@@ -137,10 +137,13 @@ export function ApiConfigPanel() {
         })
       )
 
+      // Lineage responses for leaf keys (no edges) can omit nodes/links entirely,
+      // so default to [] — flatMap would otherwise splice an undefined element in
+      // and downstream metrics crash reading .from on it.
       const lineageNodes = lineageResults
-        .flatMap((r) => (r.status === 'fulfilled' ? r.value.nodes : []))
+        .flatMap((r) => (r.status === 'fulfilled' ? r.value.nodes ?? [] : []))
       const lineageLinks = lineageResults
-        .flatMap((r) => (r.status === 'fulfilled' ? r.value.links : []))
+        .flatMap((r) => (r.status === 'fulfilled' ? r.value.links ?? [] : []))
       const lineageFailed = lineageResults.filter((r) => r.status === 'rejected').length
 
       if (lineageFailed > 0) {
