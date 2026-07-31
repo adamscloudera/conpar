@@ -2,28 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// To proxy Octopai API calls locally (avoids CORS when the tenant doesn't
-// send Access-Control-Allow-Origin headers), set VITE_OCTOPAI_BASE_URL:
-//   VITE_OCTOPAI_BASE_URL=https://acme.octopai.com npm run dev
-// Then in apiClient.ts, replace tenantUrl() with `/octopai-proxy` and
-// add the same nginx proxy_pass for production deployment.
-const octopaiBase = process.env.VITE_OCTOPAI_BASE_URL
-
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/conpar/',
-  server: octopaiBase
-    ? {
-        proxy: {
-          '/octopai-proxy': {
-            target: octopaiBase,
-            changeOrigin: true,
-            secure: false,
-            rewrite: (path) => path.replace(/^\/octopai-proxy/, ''),
-          },
-        },
-      }
-    : undefined,
+  server: {
+    proxy: {
+      // Dev proxy for Octopai API calls. Set VITE_OCTOPAI_BASE_URL to the
+      // tenant URL before starting the dev server (e.g. https://acme.octopai.com).
+      // Production uses the nginx proxy_pass in nginx/default.conf instead.
+      '/conpar/octopai-proxy': {
+        target: process.env.VITE_OCTOPAI_BASE_URL || 'https://placeholder.octopai.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/conpar\/octopai-proxy/, ''),
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {

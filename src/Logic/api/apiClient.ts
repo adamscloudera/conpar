@@ -1,13 +1,7 @@
 // Octopai Extraction API client
-// Auth: POST /api/UserAccount/Login → accessToken (2hr) + refreshToken (30d)
-// Assets: POST /api/v2.0/assets/query → asset metadata by ConnectionIds
-// Lineage: POST /api/v2.0/lineage → relationship graph from an asset key
-//
-// CORS note: Octopai is a SaaS product; direct browser requests may be blocked
-// if the tenant does not send Access-Control-Allow-Origin headers. If you see
-// "Failed to fetch" with no response body, set up a local proxy:
-//   Vite dev: enable server.proxy in vite.config.ts and set VITE_OCTOPAI_BASE_URL
-//   Production nginx: add proxy_pass for /octopai-proxy/ to the tenant URL
+// All requests go through the same-origin nginx proxy at /conpar/octopai-proxy/
+// with the tenant host in X-Octopai-Host, avoiding CORS entirely.
+// In Vite dev mode the proxy router in vite.config.ts performs the same forwarding.
 
 export type LoginResponse = {
   accessToken: string
@@ -52,20 +46,24 @@ export type LineageResponse = {
   direction: number
 }
 
-function tenantUrl(company: string): string {
-  return `https://${company}.octopai.com`
+// Routes through the nginx (or Vite dev) proxy to avoid CORS.
+// The proxy is at /conpar/octopai-proxy/; tenant is identified by X-Octopai-Host.
+function proxyUrl(path: string): string {
+  return `/conpar/octopai-proxy${path}`
 }
 
-async function apiPost<T>(url: string, body: unknown, token?: string): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+async function apiPost<T>(company: string, path: string, body: unknown, token?: string): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Octopai-Host': `${company}.octopai.com`,
+  }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   let res: Response
   try {
-    res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+    res = await fetch(proxyUrl(path), { method: 'POST', headers, body: JSON.stringify(body) })
   } catch (err) {
-    const msg = err instanceof TypeError ? 'Network error — CORS may be blocking this request. See apiClient.ts for proxy setup.' : String(err)
-    throw new Error(msg)
+    throw new Error(err instanceof TypeError ? 'Network error — could not reach the proxy.' : String(err))
   }
 
   if (!res.ok) {
@@ -77,8 +75,7 @@ async function apiPost<T>(url: string, body: unknown, token?: string): Promise<T
 }
 
 export async function login(company: string, username: string, password: string): Promise<LoginResponse> {
-  const url = `${tenantUrl(company)}/api/UserAccount/Login`
-  const data = await apiPost<LoginResponse>(url, { Username: username, Password: password })
+  const data = await apiPost<LoginResponse>(company, '/api/UserAccount/Login', { Username: username, Password: password })
   if (data.error) throw new Error(data.error)
   return data
 }
@@ -89,8 +86,7 @@ export async function queryAssets(
   connectionIds: string[],
   limit = 10000,
 ): Promise<AssetsQueryResponse> {
-  const url = `${tenantUrl(company)}/api/v2.0/assets/query`
-  return apiPost<AssetsQueryResponse>(url, { ConnectionIds: connectionIds, limit, assetType: 2 }, token)
+  return apiPost<AssetsQueryResponse>(company, '/api/v2.0/assets/query', { ConnectionIds: connectionIds, limit, assetType: 2 }, token)
 }
 
 export async function queryAllAssets(
@@ -105,13 +101,12 @@ export async function queryAllAssets(
   if (first.hasMore && first.cursorId) {
     let cursor = first.cursorId
     while (cursor) {
-      const url = `https://${company}.octopai.com/api/v2.0/assets/query/scroll/${cursor}`
       let res: Response
       try {
-        res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        res = await fetch(proxyUrl(`/api/v2.0/assets/query/scroll/${cursor}`), {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'X-Octopai-Host': `${company}.octopai.com` },
         })
-      } catch (err) {
+      } catch {
         break
       }
       if (!res.ok) break
@@ -130,6 +125,5 @@ export async function queryLineage(
   assetKey: string,
   depth = 2,
 ): Promise<LineageResponse> {
-  const url = `${tenantUrl(company)}/api/v2.0/lineage`
-  return apiPost<LineageResponse>(url, { assetKey, depth, limit: 500, assetType: 2, direction: 2 }, token)
+  return apiPost<LineageResponse>(company, '/api/v2.0/lineage', { assetKey, depth, limit: 500, assetType: 2, direction: 2 }, token)
 }
