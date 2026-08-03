@@ -3,7 +3,6 @@ import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown, Plus, 
 import { clsx } from 'clsx'
 import { octopai } from '../Logic/api/octopaiApi.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
-import { intakeTemplate, sweepConnections, sweepToItems } from '../Logic/api/connectionSweep.ts'
 import { computeInsightMetrics } from '../Logic/core/insightMetrics.ts'
 import { classifyConnectionKey, uniqueScopeValues } from '../Logic/core/connectionClassifier.ts'
 import { useApiStore } from '../stores/useApiStore.ts'
@@ -113,21 +112,14 @@ export function ApiConfigPanel() {
     const fetchStart = Date.now()
 
     try {
-      // Stage 1: Intake — understand what needs sweeping
-      const inventory = intakeTemplate(templateRows)
-      const connectionNames = inventory.needsSweep.map((c) => c.connectionLogicName)
-      logEntry('info', `Sweep: ${connectionNames.length} connections to query (${inventory.preFilled} pre-filled, ${inventory.notApplicable} N/A)`)
+      logEntry('info', `Fetching assets from ${company}.octopai.com…`)
+      setFetchProgress({ phase: 'indexing', done: 0, total: 0, current: '', startedAt: fetchStart })
 
-      // Stage 2: Index fetch + per-connection sweep
-      setFetchProgress({ phase: 'indexing', done: 0, total: connectionNames.length, current: '', startedAt: fetchStart })
-
-      const sweepResults = await sweepConnections(
-        octopai,
+      const items = await octopai.queryAllAssets(
         company,
         accessToken,
-        connectionNames,
-        (done, total, current) => {
-          setFetchProgress({ phase: 'sweeping', done, total, current, startedAt: fetchStart })
+        (fetched) => {
+          setFetchProgress({ phase: 'indexing', done: fetched, total: 0, current: '', startedAt: fetchStart })
         },
         controller.signal,
       )
@@ -137,16 +129,8 @@ export function ApiConfigPanel() {
         return
       }
 
-      // Stage 3: Filter to DB objects and inject as discovery source
-      const dbCount = Array.from(sweepResults.values()).filter(
-        (r) => r.toolType === 'DB' || r.rawItems.some((i) => i.toolType === 'DB' || i.isObjectData === true)
-      ).length
-      const etlCount = sweepResults.size - dbCount
-      logEntry('ok', `Swept ${connectionNames.length} connections — ${dbCount} DB, ${etlCount} ETL/other`)
-
-      const items = sweepToItems(sweepResults)
       const file = assetsToDiscoveryFile(items, [], `API — ${company}`)
-      logEntry('ok', `Injected ${file.rowCount.toLocaleString()} rows as discovery source`)
+      logEntry('ok', `Fetched ${items.length.toLocaleString()} assets — injected as discovery source`)
       addFile(file)
 
       setFetchProgress(null)
@@ -296,28 +280,16 @@ export function ApiConfigPanel() {
         <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border/60">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted">
-              {fetchProgress.phase === 'indexing' ? 'Building connection index…' : (
-                fetchProgress.done < fetchProgress.total
-                  ? `Sweeping ${fetchProgress.current || '…'}`
-                  : 'Sweep complete'
-              )}
+              {fetchProgress.done > 0
+                ? `Fetched ${fetchProgress.done.toLocaleString()} assets…`
+                : 'Fetching catalog…'}
             </span>
             <span className="font-mono text-foreground flex items-center gap-2">
-              {fetchProgress.phase === 'sweeping' && fetchProgress.total > 0 && (
-                <span>{fetchProgress.done}/{fetchProgress.total}</span>
-              )}
               <span className="text-muted tabular-nums">{elapsed}s</span>
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-border overflow-hidden">
-            {fetchProgress.phase === 'indexing' ? (
-              <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
-            ) : (
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-300"
-                style={{ width: fetchProgress.total > 0 ? `${(fetchProgress.done / fetchProgress.total) * 100}%` : '0%' }}
-              />
-            )}
+            <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
           </div>
         </div>
       )}
