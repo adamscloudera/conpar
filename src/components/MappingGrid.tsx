@@ -3,8 +3,9 @@ import { ChevronDown, Pencil, Check, Download, CheckCheck } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useMappingStore } from '../stores/useMappingStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
+import { useDiscoveryStore } from '../stores/useDiscoveryStore.ts'
 import type { CandidateSchema, ConfidenceLevel, MappingResult, MappingStatus } from '../types.ts'
-import { classifyTargetTech } from '../Logic/core/connectionClassifier.ts'
+import { classifyTargetTech, snowflakeDbFromApiRows } from '../Logic/core/connectionClassifier.ts'
 import { exportTemplate } from '../Logic/core/exportEngine.ts'
 
 type TechTab = 'all' | 'snowflake' | 'oracle' | 'other' | 'na'
@@ -157,10 +158,10 @@ function CandidateSelector({ result }: { result: MappingResult }) {
   )
 }
 
-function keyGroupTechFilter(g: KeyGroup, tab: TechTab): boolean {
+function keyGroupTechFilter(g: KeyGroup, tab: TechTab, snowflakeDb: string): boolean {
   if (tab === 'all') return true
   if (tab === 'na') return g.primary.status === 'not_applicable'
-  const tech = classifyTargetTech(g.key)
+  const tech = classifyTargetTech(g.key, snowflakeDb || undefined)
   if (tab === 'snowflake') return tech === 'snowflake'
   if (tab === 'oracle') return tech === 'oracle' || tech === 'mysql'
   return tech !== 'snowflake' && tech !== 'oracle' && tech !== 'mysql'
@@ -170,15 +171,22 @@ function keyGroupTechFilter(g: KeyGroup, tab: TechTab): boolean {
 export function MappingGrid() {
   const { results, bulkConfirmHighConfidence } = useMappingStore()
   const { templateType, templateFile } = useTemplateStore()
+  const { files } = useDiscoveryStore()
   const [tab, setTab] = useState<TechTab>('all')
 
   if (!results.length) return null
 
   const groups = buildKeyGroups(results)
 
-  const countFor = (t: TechTab) => groups.filter((g) => keyGroupTechFilter(g, t)).length
+  // Derive the known Snowflake DB name from API discovery data so that DB-prefixed
+  // keys like BI_PROD_DBT are classified as snowflake rather than standard.
+  const snowflakeDb = snowflakeDbFromApiRows(
+    files.flatMap((f) => f.type === 'api_lookup' ? f.impalaRows : [])
+  )
+
+  const countFor = (t: TechTab) => groups.filter((g) => keyGroupTechFilter(g, t, snowflakeDb)).length
   const highFor  = (t: TechTab) => groups.filter((g) =>
-    keyGroupTechFilter(g, t) &&
+    keyGroupTechFilter(g, t, snowflakeDb) &&
     g.primary.confidence === 'high' &&
     (g.primary.status === 'auto_filled' || g.primary.status === 'needs_selection'),
   ).length
@@ -191,13 +199,13 @@ export function MappingGrid() {
     { key: 'na',        label: 'N/A' },
   ]
 
-  const visible = groups.filter((g) => keyGroupTechFilter(g, tab))
+  const visible = groups.filter((g) => keyGroupTechFilter(g, tab, snowflakeDb))
   const bulkCount = highFor(tab)
   const canExport = !!templateType && !!templateFile
 
   const tabFilter = tab === 'all' ? undefined : (r: MappingResult) => {
     const g = groups.find((gr) => gr.key === r.templateRow.key)
-    return g ? keyGroupTechFilter(g, tab) : false
+    return g ? keyGroupTechFilter(g, tab, snowflakeDb) : false
   }
 
   return (
@@ -241,7 +249,9 @@ export function MappingGrid() {
       </div>
 
       {tab !== 'na' && (() => {
-        const actionable = visible.filter((g) => g.primary.status !== 'not_applicable' && g.primary.status !== 'pre_filled')
+        const actionable = visible.filter(
+          (g) => g.primary.status !== 'not_applicable' && g.primary.status !== 'pre_filled'
+        )
         if (!actionable.length) return null
         const hi = actionable.filter((g) => g.primary.confidence === 'high').length
         const md = actionable.filter((g) => g.primary.confidence === 'medium').length

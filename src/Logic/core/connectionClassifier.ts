@@ -14,10 +14,15 @@ const REDSHIFT_RE = /[_-]redshift(?:[_-]|$)/i
 // File system paths: starts with / or contains drive letter C:\ etc.
 const FILE_PATH_RE = /^[/\\]|^[a-zA-Z]:\\/
 
-export function classifyConnectionKey(key: string): ConnectionClass {
+export function classifyConnectionKey(key: string, knownSnowflakeDb?: string): ConnectionClass {
   if (!key || key === '_') return 'file_path'
   if (FILE_PATH_RE.test(key)) return 'file_path'
   if (SNOW_SUFFIX_RE.test(key) || SNF_SUFFIX_RE.test(key) || SNOW_PREFIX_RE.test(key)) return 'snowflake'
+  // DB-prefix pattern: e.g. key=BI_PROD_DBT when knownSnowflakeDb=BI_PROD → snowflake.
+  // Minimum DB name length of 5 prevents broad false positives from short names like "PROD".
+  if (knownSnowflakeDb && knownSnowflakeDb.length >= 5) {
+    if (key.toLowerCase().startsWith(knownSnowflakeDb.toLowerCase() + '_')) return 'snowflake'
+  }
   if (REDSHIFT_RE.test(key)) return 'redshift'
   if (SF_STANDALONE_RE.test(key) || SF_SEGMENT_RE.test(key)) return 'salesforce'
   return 'standard'
@@ -32,15 +37,22 @@ export const CONNECTION_CLASS_LABEL: Record<ConnectionClass, string> = {
 }
 
 // Derive a Snowflake schema hint from a connection key.
-// Pattern: <short-prefix>_<SCHEMA>_snow  e.g. BI_STG_snow → STG
-// When no short prefix is detected, returns the key with the snow suffix stripped.
-export function snowflakeSchemaHint(key: string): string {
-  // Strip trailing _snow / _Snow / _SNOW / _snf suffix
+// DB-prefix pattern: key=BI_PROD_DBT + knownSnowflakeDb=BI_PROD → schema=DBT
+// Snow-suffix pattern: BI_STG_snow → STG (strips short leading prefix ≤3 chars)
+export function snowflakeSchemaHint(key: string, knownSnowflakeDb?: string): string {
+  // DB-prefix: strip {DB}_ and return remainder when key starts with the known Snowflake DB.
+  if (knownSnowflakeDb && knownSnowflakeDb.length >= 5) {
+    const prefix = knownSnowflakeDb + '_'
+    if (key.toLowerCase().startsWith(prefix.toLowerCase())) {
+      return key.slice(prefix.length).toUpperCase()
+    }
+  }
+
+  // Snow-suffix: strip trailing _snow / _snf, then strip short leading prefix.
   const stripped = key.replace(SNOW_SUFFIX_RE, '').replace(SNF_SUFFIX_RE, '')
   if (!stripped) return ''
 
   const parts = stripped.split(/[_-]/)
-  // If leading segment is a short prefix (≤3 chars) and more segments follow, strip it.
   if (parts.length >= 2 && parts[0].length <= 3) {
     return parts.slice(1).join('_').toUpperCase()
   }
@@ -135,8 +147,8 @@ export function parseFullyQualifiedKey(key: string): { database: string; schema:
 
 // Classify a connection key by the target technology it addresses.
 // Used to group rows into technology tabs in the review grid.
-export function classifyTargetTech(key: string): TargetTech {
-  const cls = classifyConnectionKey(key)
+export function classifyTargetTech(key: string, knownSnowflakeDb?: string): TargetTech {
+  const cls = classifyConnectionKey(key, knownSnowflakeDb)
   if (cls === 'salesforce' || cls === 'redshift' || cls === 'file_path') return 'na'
   if (cls === 'snowflake') return 'snowflake'
   if (/oracle/i.test(key)) return 'oracle'

@@ -269,8 +269,9 @@ export function computeMappings(
       }
     }
 
-    // Classify by connection key before running the discovery matcher.
-    const connClass = classifyConnectionKey(row.key)
+    // Classify by connection key. Pass globalSnowflakeDb so DB-prefixed keys like
+    // BI_PROD_DBT are classified as 'snowflake' when BI_PROD is the known Snowflake DB.
+    const connClass = classifyConnectionKey(row.key, globalSnowflakeDb || undefined)
 
     // Salesforce, Redshift, and file-path connections don't have a DB/schema in
     // the relational sense. Mark them immediately so they don't inflate no_match.
@@ -437,7 +438,7 @@ export function computeMappings(
 }
 
 function buildSnowflakeHintCandidate(key: string, knownDb: string): CandidateSchema | null {
-  const schema = snowflakeSchemaHint(key)
+  const schema = snowflakeSchemaHint(key, knownDb)
   if (!schema) return null
   return {
     databaseName: knownDb || '',
