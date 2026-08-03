@@ -163,7 +163,7 @@ export function createOctopaiClient(proxyBase: string): OctopaiClient {
     const resp = await apiPost<AssetsQueryResponse>(
       company,
       '/api/v2.0/assets/query',
-      { limit, assetType: 1, IsMap: false },
+      { limit, assetType: 2 },
       token,
       signal,
     )

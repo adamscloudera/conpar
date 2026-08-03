@@ -114,7 +114,7 @@ export function ApiConfigPanel() {
     setQuickRules([])
 
     try {
-      logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=1000/page`)
+      logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=10000/page`)
       const assetsStart = Date.now()
       setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: 0, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
 
