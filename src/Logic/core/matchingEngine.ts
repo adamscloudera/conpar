@@ -61,7 +61,7 @@ function candidatesFromLineageMap(
       databaseName: schema,
       schemaName: schema,
       score,
-      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap: 0 },
+      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap: 0, keySchemaOverlap: 0 },
       sourceFile: file.filename,
     })
   }
@@ -126,13 +126,20 @@ function candidatesFromImpalaColumns(
     let keyDbOverlap = 0
     for (const t of keyTokenSet) { if (dbParts.has(t)) keyDbOverlap++ }
 
-    const score = keyDbOverlap * 10 + pathTokenOverlap * 3 + tableNameOverlap * 2 + Math.min(sourceFrequency, 5)
+    // How many key tokens appear in the schema name.
+    // When the key directly names the schema (e.g. BI_PROD_DBT → DBT) this
+    // signal dominates, making the correct schema win without path/table data.
+    const schemaParts = new Set(extractPathTokens(schema))
+    let keySchemaOverlap = 0
+    for (const t of keyTokenSet) { if (schemaParts.has(t)) keySchemaOverlap++ }
+
+    const score = keyDbOverlap * 10 + keySchemaOverlap * 30 + pathTokenOverlap * 3 + tableNameOverlap * 2 + Math.min(sourceFrequency, 5)
 
     const candidate: CandidateSchema = {
       databaseName: db || schema,
       schemaName: schema,
       score,
-      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap },
+      signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap, keySchemaOverlap },
       sourceFile: file.filename,
     }
 
@@ -240,7 +247,7 @@ export function computeMappings(
         databaseName: parsedKey.database,
         schemaName: parsedKey.schema,
         score: 0,
-        signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0 },
+        signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0, keySchemaOverlap: 0 },
         sourceFile: 'key-name parsing',
       }
       return {
@@ -407,7 +414,7 @@ function buildSnowflakeHintCandidate(key: string, knownDb: string): CandidateSch
     databaseName: knownDb || '',
     schemaName: schema,
     score: 0,
-    signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0 },
+    signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0, keySchemaOverlap: 0 },
     sourceFile: 'key-name inference',
   }
 }

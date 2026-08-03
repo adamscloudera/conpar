@@ -118,7 +118,7 @@ function CandidateSelector({ result }: { result: MappingResult }) {
                 {c.sourceFile === 'key-name inference' || c.sourceFile === 'key-name parsing'
                   ? `${c.sourceFile} — confirm or edit`
                   : c.score > 0
-                    ? `score ${c.score.toFixed(1)} · key→db ${c.signals.keyDbOverlap} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
+                    ? `score ${c.score.toFixed(1)} · key→db ${c.signals.keyDbOverlap} · key→schema ${c.signals.keySchemaOverlap} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
                     : 'no token match — manual selection'}
               </p>
             </button>
