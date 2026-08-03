@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown, Plus, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import type { LineageResponse } from '@adamscloudera/octopai-api'
 import { octopai } from '../Logic/api/octopaiApi.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
+import { intakeTemplate, sweepConnections, sweepToItems } from '../Logic/api/connectionSweep.ts'
 import { computeInsightMetrics } from '../Logic/core/insightMetrics.ts'
 import { classifyConnectionKey, uniqueScopeValues } from '../Logic/core/connectionClassifier.ts'
 import { useApiStore } from '../stores/useApiStore.ts'
@@ -53,19 +53,17 @@ export function ApiConfigPanel() {
     }
   }, [queryLog.length, showLog])
 
-  // Live elapsed-time ticker — resets when phase transitions, clears when fetch ends.
+  // Live elapsed-time ticker — resets when fetch starts, clears when done.
   useEffect(() => {
     if (!fetchProgress) { setElapsed(0); return }
-    const startedAt = fetchProgress.phase === 'assets'
-      ? fetchProgress.assetsStartedAt
-      : fetchProgress.lineageStartedAt
+    const startedAt = fetchProgress.startedAt
     setElapsed(Math.floor((Date.now() - startedAt) / 1000))
     const id = setInterval(
       () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
       1000,
     )
     return () => clearInterval(id)
-  }, [fetchProgress?.phase, fetchProgress?.assetsStartedAt, fetchProgress?.lineageStartedAt])
+  }, [fetchProgress?.startedAt])
 
   if (!templateType) return null
 
@@ -98,12 +96,11 @@ export function ApiConfigPanel() {
   }
 
   async function handleFetch() {
-    if (!accessToken || !connectionKeys.length) return
+    if (!accessToken || !templateRows.length) return
     clearFetchState()
     setStatus('fetching', null)
     setShowLog(true)
 
-    // Fresh controller per fetch; abort supersedes any prior in-flight fetch.
     fetchAbortRef.current?.abort()
     const controller = new AbortController()
     fetchAbortRef.current = controller
@@ -113,77 +110,54 @@ export function ApiConfigPanel() {
     setScopeConfig({ keyConnectionMap: {} })
     setQuickRules([])
 
+    const fetchStart = Date.now()
+
     try {
-      logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=10000/page`)
-      const assetsStart = Date.now()
-      setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: 0, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
+      // Stage 1: Intake — understand what needs sweeping
+      const inventory = intakeTemplate(templateRows)
+      const connectionNames = inventory.needsSweep.map((c) => c.connectionLogicName)
+      logEntry('info', `Sweep: ${connectionNames.length} connections to query (${inventory.preFilled} pre-filled, ${inventory.notApplicable} N/A)`)
 
-      const assets = await octopai.queryAllAssets(company, accessToken, (fetched) => {
-        setFetchProgress({ phase: 'assets', assetsStartedAt: assetsStart, assetsTotal: fetched, lineageDone: 0, lineageTotal: 0, lineageStartedAt: 0 })
-      }, controller.signal)
+      // Stage 2: Index fetch + per-connection sweep
+      setFetchProgress({ phase: 'indexing', done: 0, total: connectionNames.length, current: '', startedAt: fetchStart })
 
-      logEntry('ok', `Assets API: ${assets.length.toLocaleString()} assets retrieved`)
-
-      // Deduplicate keys, cap at 20 to avoid rate limits in Phase 2
-      const keysSeen = new Set<string>()
-      const assetKeys = assets
-        .filter((a) => { const k = a._key; if (!k || keysSeen.has(k)) return false; keysSeen.add(k); return true })
-        .slice(0, 20)
-        .map((a) => a._key)
-
-      logEntry('info', `Lineage API: enriching ${assetKeys.length} unique keys (depth=2)`)
-
-      const lineageStart = Date.now()
-      setFetchProgress({ phase: 'lineage', assetsStartedAt: assetsStart, assetsTotal: assets.length, lineageDone: 0, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
-
-      let lineageDone = 0
-      const lineageResults = await Promise.allSettled(
-        assetKeys.map(async (key) => {
-          const result = await octopai.queryLineage(company, accessToken, key, 2, controller.signal)
-          lineageDone++
-          setFetchProgress({ phase: 'lineage', assetsStartedAt: assetsStart, assetsTotal: assets.length, lineageDone, lineageTotal: assetKeys.length, lineageStartedAt: lineageStart })
-          return result
-        })
+      const sweepResults = await sweepConnections(
+        octopai,
+        company,
+        accessToken,
+        connectionNames,
+        (done, total, current) => {
+          setFetchProgress({ phase: 'sweeping', done, total, current, startedAt: fetchStart })
+        },
+        controller.signal,
       )
 
-      // Lineage responses for leaf keys (no edges) can omit nodes/links entirely,
-      // so default to [] — flatMap would otherwise splice an undefined element in
-      // and downstream metrics crash reading .from on it.
-      const lineageNodes = lineageResults
-        .flatMap((r) => (r.status === 'fulfilled' ? r.value.nodes ?? [] : []))
-      const lineageLinks = lineageResults
-        .flatMap((r) => (r.status === 'fulfilled' ? r.value.links ?? [] : []))
-      const lineageFailed = lineageResults.filter((r) => r.status === 'rejected').length
-
-      if (lineageFailed > 0) {
-        logEntry('error', `Lineage: ${lineageFailed}/${assetKeys.length} keys failed`)
-      }
-      logEntry('ok', `Lineage complete: ${assetKeys.length - lineageFailed}/${assetKeys.length} keys, ${lineageNodes.length} nodes`)
-
-      // Bail before touching the store if this fetch was cancelled or superseded
-      // by a newer one — otherwise a mid-fetch Disconnect leaves stale metrics
-      // and an api_lookup file behind after the session was cleared.
       if (controller.signal.aborted || fetchAbortRef.current !== controller) {
         setFetchProgress(null)
         return
       }
 
-      const file = assetsToDiscoveryFile(assets, lineageNodes, `API — ${company}`)
+      // Stage 3: Filter to DB objects and inject as discovery source
+      const dbCount = Array.from(sweepResults.values()).filter(
+        (r) => r.toolType === 'DB' || r.rawItems.some((i) => i.toolType === 'DB' || i.isObjectData === true)
+      ).length
+      const etlCount = sweepResults.size - dbCount
+      logEntry('ok', `Swept ${connectionNames.length} connections — ${dbCount} DB, ${etlCount} ETL/other`)
+
+      const items = sweepToItems(sweepResults)
+      const file = assetsToDiscoveryFile(items, [], `API — ${company}`)
       logEntry('ok', `Injected ${file.rowCount.toLocaleString()} rows as discovery source`)
       addFile(file)
+
       setFetchProgress(null)
       setStatus('done', null)
-      const lineageDepths = lineageResults
-        .filter((r): r is PromiseFulfilledResult<LineageResponse> => r.status === 'fulfilled')
-        .map((r) => r.value.depth)
-      const fetchDurationSeconds = Math.round((Date.now() - assetsStart) / 1000)
+
+      const fetchDurationSeconds = Math.round((Date.now() - fetchStart) / 1000)
       const insights = computeInsightMetrics(
-        company, assets, lineageLinks, lineageNodes, assetKeys.length, new Date().toISOString(),
-        lineageDepths, fetchDurationSeconds,
+        company, items, [], [], 0, new Date().toISOString(), [], fetchDurationSeconds,
       )
       setMetrics(insights)
     } catch (err) {
-      // A deliberate cancel (Disconnect / refetch) is not an error state.
       if (controller.signal.aborted) {
         setFetchProgress(null)
         return
@@ -320,54 +294,31 @@ export function ApiConfigPanel() {
       {/* Progress indicator — shown while fetching */}
       {fetchProgress && (
         <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border/60">
-          {fetchProgress.phase === 'assets' ? (
-            <>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">Phase 1: Fetching assets</span>
-                <span className="font-mono text-foreground flex items-center gap-2">
-                  {fetchProgress.assetsTotal > 0
-                    ? `${fetchProgress.assetsTotal.toLocaleString()} objects retrieved`
-                    : <span className="text-muted italic">connecting…</span>
-                  }
-                  <span className="text-muted tabular-nums">{elapsed}s</span>
-                </span>
-              </div>
-              {fetchProgress.assetsTotal === 0 && elapsed > 5 && (
-                <p className="text-xs text-amber-600 italic">Waiting for server response…</p>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted">
+              {fetchProgress.phase === 'indexing' ? 'Building connection index…' : (
+                fetchProgress.done < fetchProgress.total
+                  ? `Sweeping ${fetchProgress.current || '…'}`
+                  : 'Sweep complete'
               )}
-              <div className="h-1.5 rounded-full bg-border overflow-hidden">
-                <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
-              </div>
-            </>
-          ) : (() => {
-            const done = fetchProgress.lineageDone
-            const total = fetchProgress.lineageTotal
-            const pct = total > 0 ? (done / total) * 100 : 0
-            // elapsed is seconds since lineage phase started (from the live ticker)
-            const etr = done >= 2 && done < total
-              ? Math.max(1, Math.round((total - done) * elapsed / done))
-              : null
-            return (
-              <>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted">Phase 2: Enriching lineage</span>
-                  <span className="font-mono text-foreground flex items-center gap-2">
-                    {done}/{total}
-                    <span className="text-muted tabular-nums">{elapsed}s elapsed</span>
-                    {etr !== null && (
-                      <span className="text-muted">~{etr}s left</span>
-                    )}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-border overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-300"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </>
-            )
-          })()}
+            </span>
+            <span className="font-mono text-foreground flex items-center gap-2">
+              {fetchProgress.phase === 'sweeping' && fetchProgress.total > 0 && (
+                <span>{fetchProgress.done}/{fetchProgress.total}</span>
+              )}
+              <span className="text-muted tabular-nums">{elapsed}s</span>
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-border overflow-hidden">
+            {fetchProgress.phase === 'indexing' ? (
+              <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
+            ) : (
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: fetchProgress.total > 0 ? `${(fetchProgress.done / fetchProgress.total) * 100}%` : '0%' }}
+              />
+            )}
+          </div>
         </div>
       )}
 

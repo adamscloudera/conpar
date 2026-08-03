@@ -73,6 +73,7 @@ function candidatesFromImpalaColumns(
   row: TemplateRow,
   file: DiscoveryFile,
   pathTokens: Set<string>,
+  forceIncludeDb?: string,
 ): CandidateSchema[] {
   // Filter by template row's database if known and not sentinel
   const dbFilter = row.databaseName && row.databaseName !== '-1'
@@ -97,11 +98,17 @@ function candidatesFromImpalaColumns(
 
     // Without a known DB, only include rows from DBs that share key tokens.
     // This prevents unrelated databases from flooding the candidate list.
+    // Exception: always include rows from forceIncludeDb (the known Snowflake DB for
+    // Snowflake-classified keys) — extractPathTokens drops 2-char parts like 'BI',
+    // so 'BI_PROD' produces no tokens that overlap with keys like 'BI_STG_snow'.
     if (!dbFilter && keyTokenSet.size > 0) {
-      const dbParts = new Set(extractPathTokens(ir.databaseName))
-      let overlap = 0
-      for (const t of keyTokenSet) { if (dbParts.has(t)) overlap++ }
-      if (overlap === 0) continue
+      const forced = forceIncludeDb?.toLowerCase()
+      if (!forced || ir.databaseName.toLowerCase() !== forced) {
+        const dbParts = new Set(extractPathTokens(ir.databaseName))
+        let overlap = 0
+        for (const t of keyTokenSet) { if (dbParts.has(t)) overlap++ }
+        if (overlap === 0) continue
+      }
     }
 
     const groupKey = `${canonicalToken(ir.databaseName)}||${canonicalToken(ir.schemaName)}`
@@ -322,13 +329,35 @@ export function computeMappings(
     }
 
     const pathTokens = new Set(extractPathTokens(row.path))
+    // For Snowflake keys, force-include rows from the known Snowflake DB even when
+    // its name shares no token overlap with the key. extractPathTokens drops 2-char
+    // parts like 'BI', so 'BI_PROD' produces {PROD} which never overlaps with key
+    // tokens from 'BI_STG_snow' = {BI, STG, SNOW}.
+    const forceIncludeDb = connClass === 'snowflake' ? snowflakeDb : ''
+
     const allCandidates: CandidateSchema[] = []
 
     for (const file of activeFiles) {
       if (file.type === 'lineage_map') {
         allCandidates.push(...candidatesFromLineageMap(row, file, pathTokens))
       } else if (file.type === 'impala_columns' || file.type === 'api_lookup') {
-        allCandidates.push(...candidatesFromImpalaColumns(row, file, pathTokens))
+        allCandidates.push(...candidatesFromImpalaColumns(row, file, pathTokens, forceIncludeDb || undefined))
+      }
+    }
+
+    // For Snowflake keys, boost the exact (snowflakeDb, schemaHint) candidate by +100.
+    // Without this, 'to_stg.STG' (keyDbOverlap=1, score 40) beats 'BI_PROD.STG'
+    // (keyDbOverlap=0, score 30) because PROD has no overlap with key tokens.
+    // The +100 makes BI_PROD.STG dominant at 130 vs to_stg.STG at 40 (≥ 2.5×).
+    if (connClass === 'snowflake' && snowflakeDb) {
+      const db = snowflakeDb.toLowerCase()
+      const schemaHint = (snowflakeSchemaHint(row.key) ?? '').toLowerCase()
+      for (const c of allCandidates) {
+        if (schemaHint &&
+            c.databaseName.toLowerCase() === db &&
+            c.schemaName.toLowerCase() === schemaHint) {
+          c.score += 100
+        }
       }
     }
 

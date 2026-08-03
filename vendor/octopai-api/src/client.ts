@@ -15,6 +15,10 @@ export type OctopaiClient = {
     onProgress?: (fetched: number) => void,
     signal?: AbortSignal,
   ): Promise<AssetItem[]>
+  // Fetch a small batch (200) for building the connectionName → connectionId index.
+  queryAssetsForIndex(company: string, token: string, signal?: AbortSignal): Promise<AssetItem[]>
+  // Fetch assets scoped to a single connection by its numeric Octopai connectionId.
+  queryAssetsForConnection(company: string, token: string, connectionId: string, signal?: AbortSignal): Promise<AssetItem[]>
   queryLineage(
     company: string,
     token: string,
@@ -196,6 +200,31 @@ export function createOctopaiClient(proxyBase: string): OctopaiClient {
     return all
   }
 
+  async function queryAssetsForIndex(
+    company: string,
+    token: string,
+    signal?: AbortSignal,
+  ): Promise<AssetItem[]> {
+    const resp = await queryAssets(company, token, 200, signal)
+    return resp.items
+  }
+
+  async function queryAssetsForConnection(
+    company: string,
+    token: string,
+    connectionId: string,
+    signal?: AbortSignal,
+  ): Promise<AssetItem[]> {
+    const resp = await apiPost<AssetsQueryResponse>(
+      company,
+      '/api/v2.0/assets/query',
+      { limit: 50, assetType: 2, ConnectionIds: [connectionId] },
+      token,
+      signal,
+    )
+    return normalizeResponse(resp).items
+  }
+
   async function queryLineage(
     company: string,
     token: string,
@@ -216,5 +245,5 @@ export function createOctopaiClient(proxyBase: string): OctopaiClient {
     }
   }
 
-  return { login, queryAssets, queryAllAssets, queryLineage }
+  return { login, queryAssets, queryAllAssets, queryAssetsForIndex, queryAssetsForConnection, queryLineage }
 }

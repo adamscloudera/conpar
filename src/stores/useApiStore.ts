@@ -9,12 +9,11 @@ export type QueryLogEntry = {
 }
 
 export type FetchProgress = {
-  phase: 'assets' | 'lineage'
-  assetsStartedAt: number
-  assetsTotal: number
-  lineageDone: number
-  lineageTotal: number
-  lineageStartedAt: number
+  phase: 'indexing' | 'sweeping'
+  done: number
+  total: number
+  current: string
+  startedAt: number
 } | null
 
 type ApiStore = {

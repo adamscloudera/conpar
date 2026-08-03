@@ -3,11 +3,38 @@ import { ChevronDown, Pencil, Check, Download, CheckCheck } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useMappingStore } from '../stores/useMappingStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
-import type { ConfidenceLevel, MappingResult, MappingStatus } from '../types.ts'
+import type { CandidateSchema, ConfidenceLevel, MappingResult, MappingStatus } from '../types.ts'
 import { classifyTargetTech } from '../Logic/core/connectionClassifier.ts'
 import { exportTemplate } from '../Logic/core/exportEngine.ts'
 
 type TechTab = 'all' | 'snowflake' | 'oracle' | 'other' | 'na'
+
+type KeyGroup = {
+  key: string
+  connectionLogicName: string
+  totalRows: number
+  primary: MappingResult
+}
+
+function buildKeyGroups(results: MappingResult[]): KeyGroup[] {
+  const byKey = new Map<string, MappingResult[]>()
+  for (const r of results) {
+    const g = byKey.get(r.templateRow.key) ?? []
+    g.push(r)
+    byKey.set(r.templateRow.key, g)
+  }
+  return Array.from(byKey.entries()).map(([key, rows]) => {
+    const primary = rows.find(
+      (r) => r.status !== 'pre_filled' && r.status !== 'not_applicable',
+    ) ?? rows[0]
+    return {
+      key,
+      connectionLogicName: rows[0].templateRow.connectionLogicName,
+      totalRows: rows.length,
+      primary,
+    }
+  })
+}
 
 const CONFIDENCE_BADGE: Record<ConfidenceLevel, { label: string; cls: string }> = {
   high:   { label: 'High',   cls: 'badge-green' },
@@ -15,19 +42,11 @@ const CONFIDENCE_BADGE: Record<ConfidenceLevel, { label: string; cls: string }> 
   low:    { label: 'Low',    cls: 'badge-red' },
 }
 
-// Overlay badge for rows the SE has explicitly finished
 const DONE_BADGE: Partial<Record<MappingStatus, { label: string; cls: string }>> = {
   pre_filled:     { label: 'Pre-filled',  cls: 'badge-gray' },
   confirmed:      { label: 'Confirmed',   cls: 'badge-green' },
   manual:         { label: 'Manual',      cls: 'badge-green' },
   not_applicable: { label: 'N/A',         cls: 'badge-gray' },
-}
-
-function shortPath(path: string, maxLen = 50): string {
-  if (path.length <= maxLen) return path
-  const parts = path.split('\\')
-  if (parts.length > 2) return '…\\' + parts.slice(-2).join('\\')
-  return path.slice(-maxLen)
 }
 
 function resolvedDb(r: MappingResult): string {
@@ -43,13 +62,16 @@ function resolvedSchema(r: MappingResult): string {
 }
 
 function ManualEdit({ result }: { result: MappingResult }) {
-  const { setManualValues } = useMappingStore()
+  const { setManualValues, applyToSameKey } = useMappingStore()
   const [editing, setEditing] = useState(false)
   const [db, setDb] = useState(resolvedDb(result))
   const [schema, setSchema] = useState(resolvedSchema(result))
 
   function commit() {
-    if (db || schema) setManualValues(result.rowIndex, db, schema)
+    if (db || schema) {
+      setManualValues(result.rowIndex, db, schema)
+      applyToSameKey(result.rowIndex)
+    }
     setEditing(false)
   }
 
@@ -83,8 +105,14 @@ function ManualEdit({ result }: { result: MappingResult }) {
 }
 
 function CandidateSelector({ result }: { result: MappingResult }) {
-  const { selectCandidate } = useMappingStore()
+  const { selectCandidate, applyToSameKey } = useMappingStore()
   const [open, setOpen] = useState(false)
+
+  function pick(c: CandidateSchema) {
+    selectCandidate(result.rowIndex, c)
+    applyToSameKey(result.rowIndex)
+    setOpen(false)
+  }
 
   if (!result.candidates.length) return <ManualEdit result={result} />
 
@@ -110,7 +138,7 @@ function CandidateSelector({ result }: { result: MappingResult }) {
           {result.candidates.map((c) => (
             <button
               key={`${c.databaseName}.${c.schemaName}`}
-              onClick={() => { selectCandidate(result.rowIndex, c); setOpen(false) }}
+              onClick={() => pick(c)}
               className="w-full text-left px-3 py-2 text-xs hover:bg-primary-surface transition-colors border-b border-border last:border-0"
             >
               <p className="font-mono font-medium text-foreground">{c.databaseName}.{c.schemaName}</p>
@@ -129,38 +157,14 @@ function CandidateSelector({ result }: { result: MappingResult }) {
   )
 }
 
-function PropagateButton({ result }: { result: MappingResult }) {
-  const { results, applyToSameKey } = useMappingStore()
-
-  const hasValue = result.status === 'confirmed' || result.status === 'auto_filled' || result.status === 'manual'
-  if (!hasValue) return null
-
-  const targetCount = results.filter(
-    (r) =>
-      r.rowIndex !== result.rowIndex &&
-      r.templateRow.key === result.templateRow.key &&
-      r.status !== 'pre_filled',
-  ).length
-
-  if (!targetCount) return null
-
-  return (
-    <button
-      onClick={() => applyToSameKey(result.rowIndex)}
-      className="text-xs text-primary hover:underline leading-none mt-1"
-    >
-      Apply to {targetCount} other row{targetCount !== 1 ? 's' : ''} with same key
-    </button>
-  )
-}
-
-function techFilter(r: MappingResult, tab: TechTab): boolean {
+function keyGroupTechFilter(g: KeyGroup, tab: TechTab): boolean {
   if (tab === 'all') return true
-  if (tab === 'na') return r.status === 'not_applicable'
-  const tech = classifyTargetTech(r.templateRow.key)
+  if (tab === 'na') return g.primary.status === 'not_applicable'
+  const tech = classifyTargetTech(g.key)
   if (tab === 'snowflake') return tech === 'snowflake'
   if (tab === 'oracle') return tech === 'oracle' || tech === 'mysql'
-  return tech !== 'snowflake' && tech !== 'oracle' && tech !== 'mysql' && r.status !== 'not_applicable'
+  return tech !== 'snowflake' && tech !== 'oracle' && tech !== 'mysql'
+    && g.primary.status !== 'not_applicable'
 }
 
 export function MappingGrid() {
@@ -170,10 +174,14 @@ export function MappingGrid() {
 
   if (!results.length) return null
 
-  const pathLabel = templateType === 'REPORT' ? 'Report Path' : 'Folder Path'
+  const groups = buildKeyGroups(results)
 
-  const countFor = (t: TechTab) => results.filter((r) => techFilter(r, t)).length
-  const highFor  = (t: TechTab) => results.filter((r) => techFilter(r, t) && r.confidence === 'high' && (r.status === 'auto_filled' || r.status === 'needs_selection')).length
+  const countFor = (t: TechTab) => groups.filter((g) => keyGroupTechFilter(g, t)).length
+  const highFor  = (t: TechTab) => groups.filter((g) =>
+    keyGroupTechFilter(g, t) &&
+    g.primary.confidence === 'high' &&
+    (g.primary.status === 'auto_filled' || g.primary.status === 'needs_selection'),
+  ).length
 
   const TABS: { key: TechTab; label: string }[] = [
     { key: 'all',       label: 'All' },
@@ -183,12 +191,14 @@ export function MappingGrid() {
     { key: 'na',        label: 'N/A' },
   ]
 
-  const visible = results.filter((r) => techFilter(r, tab))
+  const visible = groups.filter((g) => keyGroupTechFilter(g, tab))
   const bulkCount = highFor(tab)
   const canExport = !!templateType && !!templateFile
 
-  // Filter function passed to bulkConfirmHighConfidence for the active tab
-  const tabFilter = tab === 'all' ? undefined : (r: MappingResult) => techFilter(r, tab)
+  const tabFilter = tab === 'all' ? undefined : (r: MappingResult) => {
+    const g = groups.find((gr) => gr.key === r.templateRow.key)
+    return g ? keyGroupTechFilter(g, tab) : false
+  }
 
   return (
     <div className="surface-card p-5 space-y-4">
@@ -230,13 +240,12 @@ export function MappingGrid() {
         ))}
       </div>
 
-      {/* Confidence summary bar for active tab */}
       {tab !== 'na' && (() => {
-        const rows = results.filter((r) => techFilter(r, tab) && r.status !== 'not_applicable')
-        if (!rows.length) return null
-        const hi = rows.filter((r) => r.confidence === 'high').length
-        const md = rows.filter((r) => r.confidence === 'medium').length
-        const lo = rows.filter((r) => r.confidence === 'low').length
+        const actionable = visible.filter((g) => g.primary.status !== 'not_applicable' && g.primary.status !== 'pre_filled')
+        if (!actionable.length) return null
+        const hi = actionable.filter((g) => g.primary.confidence === 'high').length
+        const md = actionable.filter((g) => g.primary.confidence === 'medium').length
+        const lo = actionable.filter((g) => g.primary.confidence === 'low').length
         return (
           <div className="flex items-center gap-3 text-xs text-muted">
             <span className="flex items-center gap-1">
@@ -259,26 +268,27 @@ export function MappingGrid() {
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-gray-50 text-muted">
-              <th className="text-left px-3 py-2 font-medium border-b border-border">Connection</th>
-              <th className="text-left px-3 py-2 font-medium border-b border-border">{pathLabel}</th>
+              <th className="text-left px-3 py-2 font-medium border-b border-border">Connection Key</th>
+              <th className="text-left px-3 py-2 font-medium border-b border-border w-16">Rows</th>
               <th className="text-left px-3 py-2 font-medium border-b border-border">Confidence</th>
               <th className="text-left px-3 py-2 font-medium border-b border-border">Database / Schema</th>
             </tr>
           </thead>
           <tbody>
-            {visible.map((r) => {
+            {visible.map((g) => {
+              const r = g.primary
               const done = DONE_BADGE[r.status]
               const conf = CONFIDENCE_BADGE[r.confidence]
               return (
-                <tr key={r.rowIndex} className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors">
+                <tr key={g.key} className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors">
                   <td className="px-3 py-2">
-                    <p className="font-medium text-foreground truncate max-w-32">{r.templateRow.connectionLogicName}</p>
-                    <p className="text-muted truncate max-w-32">{r.templateRow.key}</p>
+                    <p className="font-medium text-foreground font-mono truncate max-w-64">{g.key}</p>
+                    {g.connectionLogicName && g.connectionLogicName !== g.key && (
+                      <p className="text-muted truncate max-w-64">{g.connectionLogicName}</p>
+                    )}
                   </td>
-                  <td className="px-3 py-2 max-w-xs">
-                    <span className="font-mono text-foreground" title={r.templateRow.path}>
-                      {shortPath(r.templateRow.path)}
-                    </span>
+                  <td className="px-3 py-2">
+                    <span className="badge badge-gray">{g.totalRows}</span>
                   </td>
                   <td className="px-3 py-2">
                     {done
@@ -287,10 +297,7 @@ export function MappingGrid() {
                     }
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-col items-start gap-0.5">
-                      <CandidateSelector result={r} />
-                      <PropagateButton result={r} />
-                    </div>
+                    <CandidateSelector result={r} />
                   </td>
                 </tr>
               )
