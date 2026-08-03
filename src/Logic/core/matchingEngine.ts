@@ -1,5 +1,6 @@
-import type { CandidateSchema, DiscoveryFile, MappingResult, MappingStatus, TemplateRow } from '../../types.ts'
+import type { CandidateSchema, ConnectionScopeConfig, DiscoveryFile, MappingResult, MappingStatus, TemplateRow } from '../../types.ts'
 import { canonicalToken, extractKeyIdentifier, extractPathTokens } from './tokenExtractor.ts'
+import { classifyConnectionKey, snowflakeDbFromApiRows, snowflakeSchemaHint } from './connectionClassifier.ts'
 
 function tokenOverlap(pathTokens: Set<string>, name: string): number {
   const nameTokens = extractPathTokens(name)
@@ -159,10 +160,29 @@ function mergeCandidates(all: CandidateSchema[]): CandidateSchema[] {
   return [...merged.values()].sort((a, b) => b.score - a.score)
 }
 
+// Collect all impalaRows from api_lookup files so classifiers can read API data.
+function apiImpalaRows(discoveryFiles: DiscoveryFile[]) {
+  return discoveryFiles.flatMap((f) => f.type === 'api_lookup' ? f.impalaRows : [])
+}
+
+// Return a copy of the discovery file list where each api_lookup file's impalaRows
+// is filtered to a single Octopai connection.  Non-API files are returned unchanged.
+function scopeDiscoveryFiles(files: DiscoveryFile[], connectionName: string): DiscoveryFile[] {
+  const lower = connectionName.toLowerCase()
+  return files.map((f) => {
+    if (f.type !== 'api_lookup') return f
+    return { ...f, impalaRows: f.impalaRows.filter((r) => r.connectionLogicName.toLowerCase() === lower) }
+  })
+}
+
 export function computeMappings(
   templateRows: TemplateRow[],
   discoveryFiles: DiscoveryFile[],
+  scope?: ConnectionScopeConfig | null,
 ): MappingResult[] {
+  // Global Snowflake DB (auto-detect via /snow/i) — used for keys with no explicit scope.
+  const globalSnowflakeDb = snowflakeDbFromApiRows(apiImpalaRows(discoveryFiles))
+
   return templateRows.map((row, rowIndex) => {
     // Normalize -1 sentinel (Octopai unresolved marker) to empty
     const knownDb = row.databaseName && row.databaseName !== '-1' ? row.databaseName : ''
@@ -181,7 +201,51 @@ export function computeMappings(
       }
     }
 
+    // Classify by connection key before running the discovery matcher.
+    const connClass = classifyConnectionKey(row.key)
+
+    // Salesforce, Redshift, and file-path connections don't have a DB/schema in
+    // the relational sense. Mark them immediately so they don't inflate no_match.
+    if (connClass === 'salesforce' || connClass === 'redshift' || connClass === 'file_path') {
+      return {
+        rowIndex,
+        templateRow: row,
+        candidates: [],
+        selectedCandidate: null,
+        manualDatabase: '',
+        manualSchema: '',
+        status: 'not_applicable' as MappingStatus,
+      }
+    }
+
+    // Per-row connection scope: when a connection is assigned to this key, filter
+    // the api_lookup discovery data to only that connection's assets.
+    const scopedConnection = scope?.keyConnectionMap[row.key] ?? null
+    const activeFiles = scopedConnection
+      ? scopeDiscoveryFiles(discoveryFiles, scopedConnection)
+      : discoveryFiles
+
+    // Snowflake DB to use for hint candidates: use scoped data when pinned, else global.
+    const snowflakeDb = scopedConnection
+      ? snowflakeDbFromApiRows(apiImpalaRows(activeFiles), scopedConnection)
+      : globalSnowflakeDb
+
     if (!discoveryFiles.length) {
+      // No discovery data: for Snowflake keys, still surface a schema hint.
+      if (connClass === 'snowflake') {
+        const hint = buildSnowflakeHintCandidate(row.key, snowflakeDb)
+        if (hint) {
+          return {
+            rowIndex,
+            templateRow: row,
+            candidates: [hint],
+            selectedCandidate: hint,
+            manualDatabase: '',
+            manualSchema: '',
+            status: 'needs_selection' as MappingStatus,
+          }
+        }
+      }
       return {
         rowIndex,
         templateRow: row,
@@ -196,7 +260,7 @@ export function computeMappings(
     const pathTokens = new Set(extractPathTokens(row.path))
     const allCandidates: CandidateSchema[] = []
 
-    for (const file of discoveryFiles) {
+    for (const file of activeFiles) {
       if (file.type === 'lineage_map') {
         allCandidates.push(...candidatesFromLineageMap(row, file, pathTokens))
       } else if (file.type === 'impala_columns' || file.type === 'api_lookup') {
@@ -207,6 +271,22 @@ export function computeMappings(
     const merged = mergeCandidates(allCandidates)
 
     if (!merged.length) {
+      // Snowflake keys with no discovery match: inject a schema hint as a
+      // pre-populated suggestion so the SE confirms rather than types from scratch.
+      if (connClass === 'snowflake') {
+        const hint = buildSnowflakeHintCandidate(row.key, snowflakeDb)
+        if (hint) {
+          return {
+            rowIndex,
+            templateRow: row,
+            candidates: [hint],
+            selectedCandidate: hint,
+            manualDatabase: '',
+            manualSchema: '',
+            status: 'needs_selection' as MappingStatus,
+          }
+        }
+      }
       return {
         rowIndex,
         templateRow: row,
@@ -257,4 +337,16 @@ export function computeMappings(
       status,
     }
   })
+}
+
+function buildSnowflakeHintCandidate(key: string, knownDb: string): CandidateSchema | null {
+  const schema = snowflakeSchemaHint(key)
+  if (!schema) return null
+  return {
+    databaseName: knownDb || '',
+    schemaName: schema,
+    score: 0,
+    signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0 },
+    sourceFile: 'key-name inference',
+  }
 }

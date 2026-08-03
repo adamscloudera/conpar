@@ -4,8 +4,9 @@ import { clsx } from 'clsx'
 import { useMappingStore } from '../stores/useMappingStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
 import type { MappingResult, MappingStatus } from '../types.ts'
+import { classifyConnectionKey, CONNECTION_CLASS_LABEL } from '../Logic/core/connectionClassifier.ts'
 
-type FilterTab = 'all' | 'filled' | 'review' | 'no_match';
+type FilterTab = 'all' | 'filled' | 'review' | 'no_match' | 'not_applicable';
 
 const STATUS_BADGE: Record<MappingStatus, { label: string; cls: string }> = {
   pre_filled:      { label: 'Pre-filled',       cls: 'badge-gray' },
@@ -14,6 +15,14 @@ const STATUS_BADGE: Record<MappingStatus, { label: string; cls: string }> = {
   confirmed:       { label: 'Confirmed',         cls: 'badge-green' },
   no_match:        { label: 'No match',          cls: 'badge-red' },
   manual:          { label: 'Manual',            cls: 'badge-green' },
+  not_applicable:  { label: 'N/A',               cls: 'badge-gray' },
+}
+
+const CONN_CLASS_BADGE_CLS: Record<string, string> = {
+  snowflake:  'badge-blue',
+  salesforce: 'badge-amber',
+  redshift:   'badge-amber',
+  file_path:  'badge-gray',
 }
 
 function shortPath(path: string, maxLen = 50): string {
@@ -108,9 +117,11 @@ function CandidateSelector({ result }: { result: MappingResult }) {
             >
               <p className="font-mono font-medium text-foreground">{c.databaseName}.{c.schemaName}</p>
               <p className="text-muted mt-0.5">
-                {c.score > 0
-                  ? `score ${c.score.toFixed(1)} · key→db ${c.signals.keyDbOverlap} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
-                  : 'no token match — manual selection'}
+                {c.sourceFile === 'key-name inference'
+                  ? 'key-name inference — confirm or edit'
+                  : c.score > 0
+                    ? `score ${c.score.toFixed(1)} · key→db ${c.signals.keyDbOverlap} · path ${c.signals.pathTokenOverlap} · table ${c.signals.tableNameOverlap} · freq ${c.signals.sourceFrequency}`
+                    : 'no token match — manual selection'}
               </p>
             </button>
           ))}
@@ -149,6 +160,7 @@ function filterResults(results: MappingResult[], tab: FilterTab): MappingResult[
   if (tab === 'all') return results
   if (tab === 'filled') return results.filter((r) => ['pre_filled', 'auto_filled', 'confirmed', 'manual'].includes(r.status))
   if (tab === 'review') return results.filter((r) => r.status === 'needs_selection')
+  if (tab === 'not_applicable') return results.filter((r) => r.status === 'not_applicable')
   return results.filter((r) => r.status === 'no_match')
 }
 
@@ -164,6 +176,7 @@ export function MappingGrid() {
     filled: results.filter((r) => ['pre_filled', 'auto_filled', 'confirmed', 'manual'].includes(r.status)).length,
     review: results.filter((r) => r.status === 'needs_selection').length,
     no_match: results.filter((r) => r.status === 'no_match').length,
+    not_applicable: results.filter((r) => r.status === 'not_applicable').length,
   }
 
   const visible = filterResults(results, tab)
@@ -174,6 +187,7 @@ export function MappingGrid() {
     { key: 'filled', label: 'Filled', count: counts.filled },
     { key: 'review', label: 'Review', count: counts.review },
     { key: 'no_match', label: 'No match', count: counts.no_match },
+    ...(counts.not_applicable > 0 ? [{ key: 'not_applicable' as FilterTab, label: 'N/A', count: counts.not_applicable }] : []),
   ]
 
   return (
@@ -210,6 +224,16 @@ export function MappingGrid() {
                 <td className="px-3 py-2">
                   <p className="font-medium text-foreground truncate max-w-32">{r.templateRow.connectionLogicName}</p>
                   <p className="text-muted truncate max-w-32">{r.templateRow.key}</p>
+                  {(() => {
+                    const cls = classifyConnectionKey(r.templateRow.key)
+                    const label = CONNECTION_CLASS_LABEL[cls]
+                    if (!label) return null
+                    return (
+                      <span className={clsx('badge mt-0.5', CONN_CLASS_BADGE_CLS[cls] ?? 'badge-gray')}>
+                        {label}
+                      </span>
+                    )
+                  })()}
                 </td>
                 <td className="px-3 py-2 max-w-xs">
                   <span className="font-mono text-foreground" title={r.templateRow.path}>

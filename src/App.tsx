@@ -33,19 +33,19 @@ function deriveStep(
 export default function App() {
   const { rows: templateRows, templateType } = useTemplateStore()
   const { files: discoveryFiles } = useDiscoveryStore()
-  const { results, setResults } = useMappingStore()
+  const { results, setResults, scopeConfig } = useMappingStore()
   const { sessionLog, addLog, downloadLog } = useSessionLog()
 
   const prevTemplateLen = useRef(0)
   const prevDiscoveryLen = useRef(0)
   const prevMatchSig = useRef('')
 
-  // Recompute mappings whenever template rows or discovery files change
+  // Recompute mappings whenever template rows, discovery files, or scope config changes
   useEffect(() => {
     if (!templateRows.length) { setResults([]); return }
-    const mappings = computeMappings(templateRows, discoveryFiles)
+    const mappings = computeMappings(templateRows, discoveryFiles, scopeConfig)
     setResults(mappings)
-  }, [templateRows, discoveryFiles, setResults])
+  }, [templateRows, discoveryFiles, scopeConfig, setResults])
 
   // Log template load
   useEffect(() => {

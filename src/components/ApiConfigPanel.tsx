@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
+import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown, Plus, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { LineageResponse } from '@adamscloudera/octopai-api'
 import { octopai } from '../Logic/api/octopaiApi.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
 import { computeInsightMetrics } from '../Logic/core/insightMetrics.ts'
+import { classifyConnectionKey, uniqueConnectionNames } from '../Logic/core/connectionClassifier.ts'
 import { useApiStore } from '../stores/useApiStore.ts'
 import { useDiscoveryStore } from '../stores/useDiscoveryStore.ts'
 import { useInsightsStore } from '../stores/useInsightsStore.ts'
+import { useMappingStore } from '../stores/useMappingStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
 
 function TokenExpiry({ expiry }: { expiry: string }) {
@@ -21,9 +23,10 @@ function TokenExpiry({ expiry }: { expiry: string }) {
 }
 
 export function ApiConfigPanel() {
-  const { templateType, connectionKeys } = useTemplateStore()
+  const { templateType, connectionKeys, rows: templateRows } = useTemplateStore()
   const { addFile, files, removeFile } = useDiscoveryStore()
   const { setMetrics, clearMetrics } = useInsightsStore()
+  const { scopeConfig, setScopeConfig } = useMappingStore()
   const {
     company, accessToken, accessExpiry, displayName, status, error,
     queryLog, fetchProgress,
@@ -36,6 +39,10 @@ export function ApiConfigPanel() {
   const [password, setPassword] = useState('')
   const [showLog, setShowLog] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+
+  type QuickRule = { id: string; pattern: string; connectionName: string }
+  const [quickRules, setQuickRules] = useState<QuickRule[]>([])
+  const ruleCounter = useRef(0)
   const logEndRef = useRef<HTMLDivElement>(null)
   // Controls the in-flight fetch so Disconnect (or a refetch) can cancel it.
   const fetchAbortRef = useRef<AbortController | null>(null)
@@ -103,6 +110,8 @@ export function ApiConfigPanel() {
 
     const existing = files.find((f) => f.type === 'api_lookup')
     if (existing) removeFile(existing.id)
+    setScopeConfig({ keyConnectionMap: {} })
+    setQuickRules([])
 
     try {
       logEntry('info', `Querying ${company}.octopai.com — assetType=2, limit=1000/page`)
@@ -302,7 +311,7 @@ export function ApiConfigPanel() {
           {status === 'fetching' ? 'Fetching…' : status === 'done' ? 'Refetch' : 'Fetch from API'}
         </button>
 
-        <button onClick={() => { fetchAbortRef.current?.abort(); clearSession(); clearMetrics() }} className="btn-ghost">
+        <button onClick={() => { fetchAbortRef.current?.abort(); clearSession(); clearMetrics(); setScopeConfig({ keyConnectionMap: {} }); setQuickRules([]) }} className="btn-ghost">
           <LogOut className="w-4 h-4" />
           Disconnect
         </button>
@@ -368,6 +377,186 @@ export function ApiConfigPanel() {
           {apiFile.rowCount.toLocaleString()} assets fetched from {company}.octopai.com — injected as discovery source
         </p>
       )}
+
+      {/* Connection scoping — quick-assign rules + per-key review table */}
+      {(() => {
+        if (!apiFile || fetchProgress) return null
+        const NA_CLASSES = new Set(['file_path', 'salesforce', 'redshift'])
+        const scopableKeys = connectionKeys.filter((k) => !NA_CLASSES.has(classifyConnectionKey(k)))
+        if (!scopableKeys.length) return null
+        const connNames = uniqueConnectionNames(apiFile.impalaRows)
+
+        const keyRowCounts: Record<string, number> = {}
+        for (const row of templateRows) {
+          if (row.key) keyRowCounts[row.key] = (keyRowCounts[row.key] ?? 0) + 1
+        }
+
+        const scopedCount = scopableKeys.filter((k) => !!scopeConfig.keyConnectionMap[k]).length
+
+        function applyRule(pattern: string, connectionName: string) {
+          if (!pattern || !connectionName) return
+          const lower = pattern.toLowerCase()
+          const next = { ...scopeConfig.keyConnectionMap }
+          for (const k of scopableKeys) {
+            if (k.toLowerCase().includes(lower)) next[k] = connectionName
+          }
+          setScopeConfig({ keyConnectionMap: next })
+        }
+
+        function setKeyConnection(key: string, connectionName: string) {
+          const next = { ...scopeConfig.keyConnectionMap }
+          if (connectionName) { next[key] = connectionName } else { delete next[key] }
+          setScopeConfig({ keyConnectionMap: next })
+        }
+
+        return (
+          <div className="space-y-4">
+
+            {/* Quick assign rules */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted">Quick assign</p>
+              <p className="text-xs text-muted">
+                Match keys by pattern and assign them to an Octopai connection in one click.
+                Add one rule per tool in the stack.
+              </p>
+              <div className="space-y-2">
+                {quickRules.map((rule) => {
+                  const matchCount = rule.pattern
+                    ? scopableKeys.filter((k) => k.toLowerCase().includes(rule.pattern.toLowerCase())).length
+                    : 0
+                  const canApply = !!rule.pattern && !!rule.connectionName && matchCount > 0
+                  return (
+                    <div key={rule.id} className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted w-20 shrink-0">key contains</span>
+                      <input
+                        type="text"
+                        value={rule.pattern}
+                        onChange={(e) => setQuickRules((rs) => rs.map((r) => r.id === rule.id ? { ...r, pattern: e.target.value } : r))}
+                        placeholder="_snow"
+                        className="w-28 px-2 py-1 text-xs rounded border border-border bg-card text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        spellCheck={false}
+                      />
+                      <span className="text-xs text-muted">→</span>
+                      <select
+                        value={rule.connectionName}
+                        onChange={(e) => setQuickRules((rs) => rs.map((r) => r.id === rule.id ? { ...r, connectionName: e.target.value } : r))}
+                        disabled={!connNames.length}
+                        className="flex-1 min-w-[160px] px-2 py-1 text-xs rounded border border-border bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-50"
+                      >
+                        <option value="">{connNames.length ? 'Select connection…' : 'No connections in API data'}</option>
+                        {connNames.map((name) => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!canApply}
+                        onClick={() => applyRule(rule.pattern, rule.connectionName)}
+                        className="px-2.5 py-1 text-xs rounded border border-border bg-card hover:bg-muted/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                      >
+                        Apply{rule.pattern && matchCount > 0 ? ` (${matchCount})` : ''}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickRules((rs) => rs.filter((r) => r.id !== rule.id))}
+                        className="text-muted hover:text-foreground transition-colors"
+                        aria-label="Remove rule"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  ruleCounter.current += 1
+                  setQuickRules((rs) => [...rs, { id: String(ruleCounter.current), pattern: '', connectionName: '' }])
+                }}
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add rule
+              </button>
+            </div>
+
+            {/* Per-key review table — only useful when connection names are available */}
+            {!connNames.length ? (
+              <p className="text-xs text-amber-600">
+                No connection names found in API data — cannot assign keys to connections.
+                Check that the Octopai tenant returns <code>connLogicName</code> on assets.
+              </p>
+            ) : null}
+            <div className={clsx('space-y-2', !connNames.length && 'hidden')}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted">
+                  Connection assignments
+                  {scopedCount > 0 && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary font-medium">
+                      {scopedCount} / {scopableKeys.length} assigned
+                    </span>
+                  )}
+                </p>
+                {scopedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setScopeConfig({ keyConnectionMap: {} })}
+                    className="text-xs text-muted hover:text-foreground transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-muted/20 border-b border-border">
+                      <th className="text-left px-3 py-2 font-medium text-muted">Key</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted">Class</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted">Search in connection</th>
+                      <th className="text-right px-3 py-2 font-medium text-muted">Rows</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scopableKeys.map((key, i) => {
+                      const cls = classifyConnectionKey(key)
+                      const assigned = scopeConfig.keyConnectionMap[key] ?? ''
+                      return (
+                        <tr key={key} className={clsx('border-b last:border-0 border-border', i % 2 === 0 ? 'bg-card' : 'bg-muted/10')}>
+                          <td className="px-3 py-1.5 font-mono max-w-[180px] truncate" title={key}>{key}</td>
+                          <td className="px-3 py-1.5">
+                            {cls === 'snowflake' && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-sky-100 text-sky-700">Snowflake</span>
+                            )}
+                            {cls === 'standard' && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">Standard</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <select
+                              value={assigned}
+                              onChange={(e) => setKeyConnection(key, e.target.value)}
+                              className="w-full min-w-[160px] px-2 py-0.5 text-xs rounded border border-border bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            >
+                              <option value="">All data (auto)</option>
+                              {connNames.map((name) => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-3 py-1.5 text-right text-muted">{keyRowCounts[key] ?? 0}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )
+      })()}
 
       {status === 'error' && error && (
         <p className="flex items-start gap-2 text-xs text-red-600">

@@ -1,11 +1,14 @@
 import { Download, AlertTriangle } from 'lucide-react'
 import { useMappingStore } from '../stores/useMappingStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
+import { useDiscoveryStore } from '../stores/useDiscoveryStore.ts'
 import { exportTemplate } from '../Logic/core/exportEngine.ts'
 
 export function ExportPanel() {
   const { results } = useMappingStore()
   const { templateType, templateFile } = useTemplateStore()
+  const { files: discoveryFiles } = useDiscoveryStore()
+  const hasApiData = discoveryFiles.some((f) => f.type === 'api_lookup')
 
   if (!results.length || !templateType || !templateFile) return null
 
@@ -44,7 +47,12 @@ export function ExportPanel() {
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
             {needsReview > 0 && `${needsReview} row${needsReview > 1 ? 's' : ''} need manual selection. `}
-            {noMatch > 0 && `${noMatch} row${noMatch > 1 ? 's' : ''} have no match and will export with empty fields.`}
+            {noMatch > 0 && (
+              <>
+                {`${noMatch} row${noMatch > 1 ? 's' : ''} have no match and will export with empty fields.`}
+                {hasApiData && ' Try assigning connection scoping in Step 2b.'}
+              </>
+            )}
           </p>
         </div>
       )}

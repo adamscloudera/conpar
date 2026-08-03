@@ -61,7 +61,8 @@ export type MappingStatus =
   | 'needs_selection'  // multiple candidates, awaiting engineer choice
   | 'confirmed'        // engineer confirmed or selected a candidate
   | 'no_match'         // no discovery data matched this row
-  | 'manual';          // engineer typed values directly
+  | 'manual'           // engineer typed values directly
+  | 'not_applicable';  // connection type has no DB/schema concept (Salesforce, Redshift, file path)
 
 export type MappingResult = {
   rowIndex: number;
@@ -76,4 +77,11 @@ export type MappingResult = {
 export type SearchSuggestion = {
   terms: string[];
   coverage: number;
+};
+
+export type ConnectionScopeConfig = {
+  // Maps each template connection key to an explicit Octopai connectionLogicName.
+  // When set, DB/schema candidates for that key are sourced only from that connection's
+  // API assets. Keys not in the map use all loaded data (existing behavior).
+  keyConnectionMap: Record<string, string>;
 };
