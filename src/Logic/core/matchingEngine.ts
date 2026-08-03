@@ -166,12 +166,17 @@ function apiImpalaRows(discoveryFiles: DiscoveryFile[]) {
 }
 
 // Return a copy of the discovery file list where each api_lookup file's impalaRows
-// is filtered to a single Octopai connection.  Non-API files are returned unchanged.
-function scopeDiscoveryFiles(files: DiscoveryFile[], connectionName: string): DiscoveryFile[] {
-  const lower = connectionName.toLowerCase()
+// is filtered to a single scope value. Tries connectionLogicName first; falls back
+// to databaseName for tenants whose API doesn't populate connection names.
+function scopeDiscoveryFiles(files: DiscoveryFile[], scopeValue: string): DiscoveryFile[] {
+  const lower = scopeValue.toLowerCase()
   return files.map((f) => {
     if (f.type !== 'api_lookup') return f
-    return { ...f, impalaRows: f.impalaRows.filter((r) => r.connectionLogicName.toLowerCase() === lower) }
+    const byConn = f.impalaRows.filter((r) => r.connectionLogicName.toLowerCase() === lower)
+    const rows = byConn.length > 0
+      ? byConn
+      : f.impalaRows.filter((r) => r.databaseName.toLowerCase() === lower)
+    return { ...f, impalaRows: rows }
   })
 }
 

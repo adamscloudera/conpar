@@ -77,3 +77,21 @@ export function uniqueConnectionNames(
   }
   return [...names].sort((a, b) => a.localeCompare(b))
 }
+
+// Return unique scope values for the Quick Assign / per-key dropdowns.
+// Prefers connectionLogicName; falls back to databaseName when no connection
+// names are present (e.g. tenants whose API omits connLogicName on assets).
+export function uniqueScopeValues(
+  impalaRows: Array<{ connectionLogicName: string; databaseName: string }>,
+): { values: string[]; mode: 'connection' | 'database' } {
+  const connNames = new Set<string>()
+  const dbNames = new Set<string>()
+  for (const row of impalaRows) {
+    if (row.connectionLogicName?.trim()) connNames.add(row.connectionLogicName.trim())
+    if (row.databaseName?.trim()) dbNames.add(row.databaseName.trim())
+  }
+  if (connNames.size > 0) {
+    return { values: [...connNames].sort((a, b) => a.localeCompare(b)), mode: 'connection' }
+  }
+  return { values: [...dbNames].sort((a, b) => a.localeCompare(b)), mode: 'database' }
+}

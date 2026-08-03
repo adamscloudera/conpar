@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { ChevronDown, Pencil, Check } from 'lucide-react'
+import { ChevronDown, Pencil, Check, Download } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useMappingStore } from '../stores/useMappingStore.ts'
 import { useTemplateStore } from '../stores/useTemplateStore.ts'
 import type { MappingResult, MappingStatus } from '../types.ts'
 import { classifyConnectionKey, CONNECTION_CLASS_LABEL } from '../Logic/core/connectionClassifier.ts'
+import { exportTemplate } from '../Logic/core/exportEngine.ts'
 
 type FilterTab = 'all' | 'filled' | 'review' | 'no_match' | 'not_applicable';
 
@@ -166,7 +167,7 @@ function filterResults(results: MappingResult[], tab: FilterTab): MappingResult[
 
 export function MappingGrid() {
   const { results } = useMappingStore()
-  const { templateType } = useTemplateStore()
+  const { templateType, templateFile } = useTemplateStore()
   const [tab, setTab] = useState<FilterTab>('all')
 
   if (!results.length) return null
@@ -190,9 +191,22 @@ export function MappingGrid() {
     ...(counts.not_applicable > 0 ? [{ key: 'not_applicable' as FilterTab, label: 'N/A', count: counts.not_applicable }] : []),
   ]
 
+  const canExport = !!templateType && !!templateFile
+
   return (
     <div className="surface-card p-5 space-y-4">
-      <h2 className="text-base font-semibold text-foreground">Step 4 — Review Matches</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-foreground">Step 4 — Review Matches</h2>
+        {canExport && (
+          <button
+            onClick={() => exportTemplate(results, templateType!, templateFile!)}
+            className="btn-primary py-1 px-3 text-xs"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
+        )}
+      </div>
 
       <div className="segmented-control">
         {TABS.map((t) => (

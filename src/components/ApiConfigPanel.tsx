@@ -5,7 +5,7 @@ import type { LineageResponse } from '@adamscloudera/octopai-api'
 import { octopai } from '../Logic/api/octopaiApi.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
 import { computeInsightMetrics } from '../Logic/core/insightMetrics.ts'
-import { classifyConnectionKey, uniqueConnectionNames } from '../Logic/core/connectionClassifier.ts'
+import { classifyConnectionKey, uniqueScopeValues } from '../Logic/core/connectionClassifier.ts'
 import { useApiStore } from '../stores/useApiStore.ts'
 import { useDiscoveryStore } from '../stores/useDiscoveryStore.ts'
 import { useInsightsStore } from '../stores/useInsightsStore.ts'
@@ -384,7 +384,9 @@ export function ApiConfigPanel() {
         const NA_CLASSES = new Set(['file_path', 'salesforce', 'redshift'])
         const scopableKeys = connectionKeys.filter((k) => !NA_CLASSES.has(classifyConnectionKey(k)))
         if (!scopableKeys.length) return null
-        const connNames = uniqueConnectionNames(apiFile.impalaRows)
+        const { values: connNames, mode: scopeMode } = uniqueScopeValues(apiFile.impalaRows)
+        const scopeLabel = scopeMode === 'connection' ? 'connection' : 'database'
+        const scopePlaceholder = scopeMode === 'connection' ? 'Select connection…' : 'Select database…'
 
         const keyRowCounts: Record<string, number> = {}
         for (const row of templateRows) {
@@ -416,7 +418,7 @@ export function ApiConfigPanel() {
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted">Quick assign</p>
               <p className="text-xs text-muted">
-                Match keys by pattern and assign them to an Octopai connection in one click.
+                Match keys by pattern and assign them to a {scopeLabel} in one click.
                 Add one rule per tool in the stack.
               </p>
               <div className="space-y-2">
@@ -443,7 +445,7 @@ export function ApiConfigPanel() {
                         disabled={!connNames.length}
                         className="flex-1 min-w-[160px] px-2 py-1 text-xs rounded border border-border bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-50"
                       >
-                        <option value="">{connNames.length ? 'Select connection…' : 'No connections in API data'}</option>
+                        <option value="">{connNames.length ? scopePlaceholder : `No ${scopeLabel}s in API data`}</option>
                         {connNames.map((name) => (
                           <option key={name} value={name}>{name}</option>
                         ))}
@@ -484,8 +486,7 @@ export function ApiConfigPanel() {
             {/* Per-key review table — only useful when connection names are available */}
             {!connNames.length ? (
               <p className="text-xs text-amber-600">
-                No connection names found in API data — cannot assign keys to connections.
-                Check that the Octopai tenant returns <code>connLogicName</code> on assets.
+                No connection or database names found in API data — cannot assign keys to a scope.
               </p>
             ) : null}
             <div className={clsx('space-y-2', !connNames.length && 'hidden')}>
@@ -514,7 +515,7 @@ export function ApiConfigPanel() {
                     <tr className="bg-muted/20 border-b border-border">
                       <th className="text-left px-3 py-2 font-medium text-muted">Key</th>
                       <th className="text-left px-3 py-2 font-medium text-muted">Class</th>
-                      <th className="text-left px-3 py-2 font-medium text-muted">Search in connection</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted">Search in {scopeLabel}</th>
                       <th className="text-right px-3 py-2 font-medium text-muted">Rows</th>
                     </tr>
                   </thead>
@@ -543,6 +544,7 @@ export function ApiConfigPanel() {
                               {connNames.map((name) => (
                                 <option key={name} value={name}>{name}</option>
                               ))}
+
                             </select>
                           </td>
                           <td className="px-3 py-1.5 text-right text-muted">{keyRowCounts[key] ?? 0}</td>
