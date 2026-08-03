@@ -1,6 +1,6 @@
-import type { CandidateSchema, ConnectionScopeConfig, DiscoveryFile, MappingResult, MappingStatus, TemplateRow } from '../../types.ts'
+import type { CandidateSchema, ConfidenceLevel, ConnectionScopeConfig, DiscoveryFile, MappingResult, MappingStatus, TemplateRow } from '../../types.ts'
 import { canonicalToken, extractKeyIdentifier, extractPathTokens } from './tokenExtractor.ts'
-import { classifyConnectionKey, snowflakeDbFromApiRows, snowflakeSchemaHint } from './connectionClassifier.ts'
+import { classifyConnectionKey, parseFullyQualifiedKey, snowflakeDbFromApiRows, snowflakeSchemaHint } from './connectionClassifier.ts'
 
 function tokenOverlap(pathTokens: Set<string>, name: string): number {
   const nameTokens = extractPathTokens(name)
@@ -180,6 +180,31 @@ function scopeDiscoveryFiles(files: DiscoveryFile[], scopeValue: string): Discov
   })
 }
 
+// Derive confidence from the resolved status and candidate.
+// 'key-name parsing'  → fully-qualified key gave exact DB+schema  → high
+// 'key-name inference' → Snowflake schema hint from key name:
+//     DB present (scope assigned) → high; DB absent → medium
+// API auto_filled with real DB → high
+// needs_selection (multiple candidates) → medium
+// no_match → low
+function computeConfidence(
+  status: MappingStatus,
+  selectedCandidate: CandidateSchema | null,
+  candidates: CandidateSchema[],
+): ConfidenceLevel {
+  if (status === 'pre_filled' || status === 'confirmed' || status === 'manual') return 'high'
+  if (status === 'not_applicable') return 'high'
+  if (status === 'no_match') return 'low'
+  const c = selectedCandidate ?? candidates[0] ?? null
+  if (!c) return 'low'
+  if (c.sourceFile === 'key-name parsing') return 'high'
+  if (c.sourceFile === 'key-name inference') {
+    return c.databaseName ? 'high' : 'medium'
+  }
+  if (status === 'auto_filled') return 'high'
+  return 'medium'
+}
+
 export function computeMappings(
   templateRows: TemplateRow[],
   discoveryFiles: DiscoveryFile[],
@@ -203,6 +228,30 @@ export function computeMappings(
         manualDatabase: row.databaseName,
         manualSchema: row.schemaName,
         status: 'pre_filled' as MappingStatus,
+        confidence: 'high' as ConfidenceLevel,
+      }
+    }
+
+    // Fully-qualified key: DB.schema.connectionName — extract DB and schema directly.
+    // Handles Oracle-style keys like stgprod.dwh.BI_DWH_Oracle without requiring API data.
+    const parsedKey = !knownDb && !knownSchema ? parseFullyQualifiedKey(row.key) : null
+    if (parsedKey) {
+      const candidate: CandidateSchema = {
+        databaseName: parsedKey.database,
+        schemaName: parsedKey.schema,
+        score: 0,
+        signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0 },
+        sourceFile: 'key-name parsing',
+      }
+      return {
+        rowIndex,
+        templateRow: row,
+        candidates: [candidate],
+        selectedCandidate: candidate,
+        manualDatabase: '',
+        manualSchema: '',
+        status: 'auto_filled' as MappingStatus,
+        confidence: 'high' as ConfidenceLevel,
       }
     }
 
@@ -220,6 +269,7 @@ export function computeMappings(
         manualDatabase: '',
         manualSchema: '',
         status: 'not_applicable' as MappingStatus,
+        confidence: 'high' as ConfidenceLevel,
       }
     }
 
@@ -248,6 +298,7 @@ export function computeMappings(
             manualDatabase: '',
             manualSchema: '',
             status: 'needs_selection' as MappingStatus,
+            confidence: computeConfidence('needs_selection', hint, [hint]),
           }
         }
       }
@@ -259,6 +310,7 @@ export function computeMappings(
         manualDatabase: '',
         manualSchema: '',
         status: 'no_match' as MappingStatus,
+        confidence: 'low' as ConfidenceLevel,
       }
     }
 
@@ -289,6 +341,7 @@ export function computeMappings(
             manualDatabase: '',
             manualSchema: '',
             status: 'needs_selection' as MappingStatus,
+            confidence: computeConfidence('needs_selection', hint, [hint]),
           }
         }
       }
@@ -300,6 +353,7 @@ export function computeMappings(
         manualDatabase: '',
         manualSchema: '',
         status: 'no_match' as MappingStatus,
+        confidence: 'low' as ConfidenceLevel,
       }
     }
 
@@ -332,14 +386,16 @@ export function computeMappings(
         ? 'auto_filled'
         : 'needs_selection'
 
+    const selectedCandidate = candidates[0] ?? null
     return {
       rowIndex,
       templateRow: row,
       candidates,
-      selectedCandidate: candidates[0] ?? null,
+      selectedCandidate,
       manualDatabase: '',
       manualSchema: '',
       status,
+      confidence: computeConfidence(status, selectedCandidate, candidates),
     }
   })
 }

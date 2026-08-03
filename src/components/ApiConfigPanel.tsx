@@ -384,7 +384,7 @@ export function ApiConfigPanel() {
         const NA_CLASSES = new Set(['file_path', 'salesforce', 'redshift'])
         const scopableKeys = connectionKeys.filter((k) => !NA_CLASSES.has(classifyConnectionKey(k)))
         if (!scopableKeys.length) return null
-        const { values: connNames, mode: scopeMode } = uniqueScopeValues(apiFile.impalaRows)
+        const { values: connNames, mode: scopeMode, toolLabels } = uniqueScopeValues(apiFile.impalaRows)
         const scopeLabel = scopeMode === 'connection' ? 'connection' : 'database'
         const scopePlaceholder = scopeMode === 'connection' ? 'Select connection…' : 'Select database…'
 
@@ -447,7 +447,9 @@ export function ApiConfigPanel() {
                       >
                         <option value="">{connNames.length ? scopePlaceholder : `No ${scopeLabel}s in API data`}</option>
                         {connNames.map((name) => (
-                          <option key={name} value={name}>{name}</option>
+                          <option key={name} value={name}>
+                            {toolLabels[name] ? `${name} · ${toolLabels[name]}` : name}
+                          </option>
                         ))}
                       </select>
                       <button
@@ -542,7 +544,9 @@ export function ApiConfigPanel() {
                             >
                               <option value="">All data (auto)</option>
                               {connNames.map((name) => (
-                                <option key={name} value={name}>{name}</option>
+                                <option key={name} value={name}>
+                                  {toolLabels[name] ? `${name} · ${toolLabels[name]}` : name}
+                                </option>
                               ))}
 
                             </select>

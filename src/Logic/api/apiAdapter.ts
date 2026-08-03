@@ -25,6 +25,7 @@ function assetToRow(item: AssetItem | LineageNode): ImpalaColumnsRow {
     dataType: '',
     connectionLogicName: item.connectionName ?? '',
     connectionId: ('connectionId' in item ? item.connectionId : undefined) ?? '',
+    toolName: ('toolName' in item ? item.toolName : undefined) ?? '',
   }
 }
 

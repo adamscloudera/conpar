@@ -7,6 +7,9 @@ type MappingStore = {
   selectCandidate: (rowIndex: number, candidate: CandidateSchema) => void;
   setManualValues: (rowIndex: number, databaseName: string, schemaName: string) => void;
   applyToSameKey: (rowIndex: number) => void;
+  // Confirm all high-confidence auto-filled / needs-selection rows.
+  // Optional filter limits the action to a subset (e.g. one technology tab).
+  bulkConfirmHighConfidence: (filter?: (r: MappingResult) => boolean) => void;
   clearResults: () => void;
   scopeConfig: ConnectionScopeConfig;
   setScopeConfig: (config: ConnectionScopeConfig) => void;
@@ -54,6 +57,17 @@ export const useMappingStore = create<MappingStore>((set) => ({
         }),
       }
     }),
+
+  bulkConfirmHighConfidence: (filter) =>
+    set((state) => ({
+      results: state.results.map((r) => {
+        if (r.confidence !== 'high') return r
+        if (filter && !filter(r)) return r
+        if (r.status !== 'auto_filled' && r.status !== 'needs_selection') return r
+        if (!r.selectedCandidate) return r
+        return { ...r, status: 'confirmed' as const }
+      }),
+    })),
 
   clearResults: () => set({ results: [] }),
 }))

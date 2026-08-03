@@ -58,6 +58,7 @@ function parseImpalaColumns(rows: Record<string, string>[]): ImpalaColumnsRow[] 
     dataType: (r['Data Type'] ?? '').trim(),
     connectionLogicName: (r['Connection Logic Name'] ?? '').trim(),
     connectionId: (r['CONNECTION_ID'] ?? '').trim(),
+    toolName: '',
   }))
 }
 

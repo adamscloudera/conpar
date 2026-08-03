@@ -27,6 +27,7 @@ export type ImpalaColumnsRow = {
   dataType: string;
   connectionLogicName: string;
   connectionId: string;
+  toolName: string;
 };
 
 export type DiscoveryFileType = 'lineage_map' | 'impala_columns' | 'api_lookup' | 'unknown';
@@ -64,6 +65,12 @@ export type MappingStatus =
   | 'manual'           // engineer typed values directly
   | 'not_applicable';  // connection type has no DB/schema concept (Salesforce, Redshift, file path)
 
+// Three-tier confidence model.
+// high   — both DB and schema are known with certainty (key parsed, API matched, or SE confirmed)
+// medium — schema inferred from key name but DB is uncertain, or multiple candidates exist
+// low    — no structural signal; needs manual entry or further investigation
+export type ConfidenceLevel = 'high' | 'medium' | 'low'
+
 export type MappingResult = {
   rowIndex: number;
   templateRow: TemplateRow;
@@ -72,6 +79,7 @@ export type MappingResult = {
   manualDatabase: string;
   manualSchema: string;
   status: MappingStatus;
+  confidence: ConfidenceLevel;
 };
 
 export type SearchSuggestion = {

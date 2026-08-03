@@ -1,0 +1,24 @@
+{
+  "name": "@adamscloudera/octopai-api",
+  "version": "1.0.0",
+  "description": "Reusable Octopai Extraction API client for CDL field tools",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamscloudera/integration-projects.git",
+    "directory": "octopai-api"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "license": "UNLICENSED"
+}
