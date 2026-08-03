@@ -25,7 +25,7 @@ export type OctopaiClient = {
 }
 
 const REQUEST_TIMEOUT_MS = 60_000
-const DEFAULT_PAGE_SIZE = 1000
+const DEFAULT_PAGE_SIZE = 10_000
 
 // Merge an external AbortSignal into a locally-owned controller so a single
 // controller can gate both timeout and caller-initiated cancellation.
@@ -163,7 +163,7 @@ export function createOctopaiClient(proxyBase: string): OctopaiClient {
     const resp = await apiPost<AssetsQueryResponse>(
       company,
       '/api/v2.0/assets/query',
-      { limit, assetType: 2 },
+      { limit, assetType: 1, IsMap: false },
       token,
       signal,
     )
