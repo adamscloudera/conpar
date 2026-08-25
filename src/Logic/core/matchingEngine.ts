@@ -15,6 +15,7 @@ function candidatesFromLineageMap(
   row: TemplateRow,
   file: DiscoveryFile,
   pathTokens: Set<string>,
+  knownDb: string,
 ): CandidateSchema[] {
   const rowKey = canonicalToken(row.key)
   const rowConn = canonicalToken(row.connectionLogicName)
@@ -58,7 +59,7 @@ function candidatesFromLineageMap(
     const score = pathTokenOverlap * 3 + tableNameOverlap * 2 + Math.min(sourceFrequency, 5)
 
     candidates.push({
-      databaseName: schema,
+      databaseName: knownDb,
       schemaName: schema,
       score,
       signals: { pathTokenOverlap, tableNameOverlap, sourceFrequency, keyDbOverlap: 0, keySchemaOverlap: 0 },
@@ -340,7 +341,7 @@ export function computeMappings(
 
     for (const file of activeFiles) {
       if (file.type === 'lineage_map') {
-        allCandidates.push(...candidatesFromLineageMap(row, file, pathTokens))
+        allCandidates.push(...candidatesFromLineageMap(row, file, pathTokens, knownDb))
       } else if (file.type === 'impala_columns' || file.type === 'api_lookup') {
         allCandidates.push(...candidatesFromImpalaColumns(row, file, pathTokens, forceIncludeDb || undefined))
       }
@@ -352,7 +353,7 @@ export function computeMappings(
     // The +100 makes BI_PROD.STG dominant at 130 vs to_stg.STG at 40 (≥ 2.5×).
     if (connClass === 'snowflake' && snowflakeDb) {
       const db = snowflakeDb.toLowerCase()
-      const schemaHint = (snowflakeSchemaHint(row.key) ?? '').toLowerCase()
+      const schemaHint = (snowflakeSchemaHint(row.key, snowflakeDb) ?? '').toLowerCase()
       for (const c of allCandidates) {
         if (schemaHint &&
             c.databaseName.toLowerCase() === db &&
@@ -411,10 +412,13 @@ export function computeMappings(
     // Unscored DB schemas appended at end for manual review
     const candidates = [...displayScored, ...zeroScore]
 
-    // Dominant check based on scored candidates only
+    // Dominant check: top candidate must clear a minimum score floor AND lead by 2.5x.
+    // Without the floor a 1-point dominant match auto-fills with confidence:high.
+    const DOMINANT_SCORE_FLOOR = 5
     const dominant =
-      nonZero.length === 1 ||
-      (nonZero.length > 1 && nonZero[0].score >= nonZero[1].score * 2.5)
+      nonZero.length >= 1 &&
+      nonZero[0].score >= DOMINANT_SCORE_FLOOR &&
+      (nonZero.length === 1 || nonZero[0].score >= nonZero[1].score * 2.5)
 
     // If no scored candidates, prompt user to pick from the DB's schemas
     const status: MappingStatus = !nonZero.length

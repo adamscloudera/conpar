@@ -1,7 +1,8 @@
 import * as XLSX from 'xlsx'
 import type { MappingResult, TemplateType } from '../../types.ts'
 
-function resolvedValues(result: MappingResult): { serverName: string; databaseName: string; schemaName: string } {
+export function resolvedValues(result: MappingResult): { serverName: string; databaseName: string; schemaName: string } {
+  const sentinel = (v: string) => (v === '-1' ? '' : v)
   if (result.status === 'pre_filled' || result.status === 'manual') {
     return {
       serverName: result.templateRow.serverName,
@@ -10,13 +11,14 @@ function resolvedValues(result: MappingResult): { serverName: string; databaseNa
     }
   }
   if (result.selectedCandidate) {
+    // lineage_map candidates carry databaseName:'' because the format has no database column.
+    // Fall back to the template row's known database so the exported CSV is not corrupted.
     return {
       serverName: result.templateRow.serverName,
-      databaseName: result.selectedCandidate.databaseName,
+      databaseName: result.selectedCandidate.databaseName || sentinel(result.templateRow.databaseName),
       schemaName: result.selectedCandidate.schemaName,
     }
   }
-  const sentinel = (v: string) => (v === '-1' ? '' : v)
   return {
     serverName: result.templateRow.serverName,
     databaseName: sentinel(result.templateRow.databaseName),
