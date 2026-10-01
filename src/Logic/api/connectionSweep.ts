@@ -166,8 +166,10 @@ export function sweepToItems(sweepResults: SweepResults): AssetItem[] {
       // because the caller already knows the connection. Backfill from the sweep map key
       // so Quick Assign has connection names to work with, and matching can group correctly.
       const effectiveItem = item.connectionName ? item : { ...item, connectionName: connName }
+      // Narrowed separately: TS cannot prove connectionName is defined on the union above.
+      const effectiveName = item.connectionName ?? connName
 
-      const key = `${effectiveItem.connectionName.toLowerCase()}\x00${db}\x00${schema}\x00${effectiveItem.objectName ?? ''}`
+      const key = `${effectiveName.toLowerCase()}\x00${db}\x00${schema}\x00${effectiveItem.objectName ?? ''}`
       if (seen.has(key)) continue
       seen.add(key)
       items.push(effectiveItem)
