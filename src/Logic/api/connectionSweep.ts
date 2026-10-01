@@ -1,6 +1,7 @@
 import type { AssetItem, OctopaiClient } from '@adamscloudera/octopai-api'
 import type { TemplateRow } from '../../types.ts'
 import { classifyConnectionKey } from '../core/connectionClassifier.ts'
+import { classifyText } from './decisionEngine.ts'
 
 export type ConnectionInventory = {
   needsSweep: Array<{ connectionLogicName: string; rowCount: number }>
@@ -17,6 +18,14 @@ type ConnectionMeta = {
 type SweepResult = ConnectionMeta & { rawItems: AssetItem[] }
 
 export type SweepResults = Map<string, SweepResult>
+
+export type CoverageSummary = {
+  total: number
+  na: number
+  swept: number
+  resolved: number
+  unresolved: number
+}
 
 const NA_CLASSES = new Set(['file_path', 'salesforce', 'redshift'])
 
@@ -84,10 +93,37 @@ export async function sweepConnections(
     }
   }
 
+  // Stage 2a enrichment: entries the regex missed (toolName empty or 'UNK') are
+  // sent to the local decision-engine for a best-effort classification pass.
+  // Runs in parallel; if the server is down all calls silently return null and
+  // the sweep continues with whatever the API gave.
+  const CLASSIFY_LABELS = [
+    'SNOWFLAKE', 'ORACLE', 'MYSQL', 'POSTGRESQL', 'REDSHIFT', 'BIGQUERY', 'TABLEAU',
+    'POWERBI', 'DBT', 'INFORMATICA_CLOUD', 'INFORMATICA', 'MSSQL', 'SAP', 'SAPHANA',
+    'EEOBIEE', 'unknown',
+  ]
+  const unknownEntries = Array.from(idMap.entries()).filter(
+    ([, meta]) => !meta.toolName || meta.toolName === 'UNK',
+  )
+  if (unknownEntries.length > 0) {
+    await Promise.all(
+      unknownEntries.map(async ([name, meta]) => {
+        const result = await classifyText(name, CLASSIFY_LABELS)
+        if (result && result !== 'unknown') {
+          meta.toolName = result
+        }
+      }),
+    )
+  }
+
   // Stage 2b: Per-connection targeted fetch using ConnectionIds filter.
-  for (let i = 0; i < connectionNames.length; i++) {
+  // No AI pre-screening here — sweepToItems already discards non-DB assets on
+  // output, so the cost of sweeping an ETL or BI connection is at most one
+  // empty API call. NA_CLASSES above handles the static known-useless cases.
+  const sweepQueue = connectionNames
+  for (let i = 0; i < sweepQueue.length; i++) {
     if (signal?.aborted) break
-    const name = connectionNames[i]
+    const name = sweepQueue[i]
     onProgress(i, connectionNames.length, name)
 
     const lower = name.toLowerCase()
@@ -119,19 +155,41 @@ export function sweepToItems(sweepResults: SweepResults): AssetItem[] {
   const items: AssetItem[] = []
   const seen = new Set<string>()
 
-  for (const [, result] of sweepResults) {
+  for (const [connName, result] of sweepResults) {
     for (const item of result.rawItems) {
       if (item.toolType !== 'DB' && item.isObjectData !== true) continue
       const db = item.databaseName ?? ''
       const schema = item.schemaName ?? ''
       if (!db && !schema) continue
 
-      const key = `${(item.connectionName ?? '').toLowerCase()}\x00${db}\x00${schema}\x00${item.objectName ?? ''}`
+      // The ConnectionIds-filtered API response often omits connLogicName on each item
+      // because the caller already knows the connection. Backfill from the sweep map key
+      // so Quick Assign has connection names to work with, and matching can group correctly.
+      const effectiveItem = item.connectionName ? item : { ...item, connectionName: connName }
+
+      const key = `${effectiveItem.connectionName.toLowerCase()}\x00${db}\x00${schema}\x00${effectiveItem.objectName ?? ''}`
       if (seen.has(key)) continue
       seen.add(key)
-      items.push(item)
+      items.push(effectiveItem)
     }
   }
 
   return items
+}
+
+// Coverage summary: how many template rows ended up with full db+schema metadata
+// after the sweep. Pre-filled rows and N/A rows are counted toward totals but
+// only API-returned items (with both databaseName and schemaName) count as resolved.
+export function computeCoverage(inventory: ConnectionInventory, items: AssetItem[]): CoverageSummary {
+  const total =
+    inventory.preFilled +
+    inventory.notApplicable +
+    inventory.needsSweep.reduce((sum, c) => sum + c.rowCount, 0)
+  const na = inventory.notApplicable
+  const swept = total - na
+  const resolved = items.filter(
+    (item) => (item.databaseName ?? '') !== '' && (item.schemaName ?? '') !== '',
+  ).length
+  const unresolved = swept - resolved
+  return { total, na, swept, resolved, unresolved }
 }

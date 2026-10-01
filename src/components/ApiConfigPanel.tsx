@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Plug, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronDown, Plus, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { octopai } from '../Logic/api/octopaiApi.ts'
+import { intakeTemplate, sweepConnections, sweepToItems, computeCoverage } from '../Logic/api/connectionSweep.ts'
+import type { SweepResults } from '../Logic/api/connectionSweep.ts'
 import { assetsToDiscoveryFile } from '../Logic/api/apiAdapter.ts'
 import { computeInsightMetrics } from '../Logic/core/insightMetrics.ts'
 import { classifyConnectionKey, uniqueScopeValues } from '../Logic/core/connectionClassifier.ts'
@@ -28,9 +30,10 @@ export function ApiConfigPanel() {
   const { scopeConfig, setScopeConfig } = useMappingStore()
   const {
     company, accessToken, accessExpiry, displayName, status, error,
-    queryLog, fetchProgress,
+    queryLog, fetchProgress, sweepCoverage, sweepCache,
     setConfig, setTokens, setStatus, clearSession,
-    addQueryLog, setFetchProgress, clearFetchState,
+    addQueryLog, setFetchProgress, clearFetchState, setSweepCoverage,
+    setSweepCacheEntry, clearSweepCache,
   } = useApiStore()
 
   const [companyInput, setCompanyInput] = useState(company)
@@ -112,26 +115,51 @@ export function ApiConfigPanel() {
     const fetchStart = Date.now()
 
     try {
-      logEntry('info', `Fetching assets from ${company}.octopai.com…`)
-      setFetchProgress({ phase: 'indexing', done: 0, total: 0, current: '', startedAt: fetchStart })
+      const inventory = intakeTemplate(templateRows)
+      logEntry('info', `Template: ${inventory.needsSweep.length} connection${inventory.needsSweep.length !== 1 ? 's' : ''} to sweep — ${inventory.preFilled} pre-filled, ${inventory.notApplicable} N/A`)
 
-      const items = await octopai.queryAllAssets(
-        company,
-        accessToken,
-        (fetched) => {
-          setFetchProgress({ phase: 'indexing', done: fetched, total: 0, current: '', startedAt: fetchStart })
-        },
-        controller.signal,
-      )
-
-      if (controller.signal.aborted || fetchAbortRef.current !== controller) {
-        setFetchProgress(null)
+      if (!inventory.needsSweep.length) {
+        logEntry('ok', 'Nothing to sweep — all rows already resolved')
+        setStatus('done', null)
         return
       }
 
+      const connectionNames = inventory.needsSweep.map((c) => c.connectionLogicName)
+      const cacheKey = [`${company}.octopai.com`, ...connectionNames].sort().join('::')
+
+      let sweepResults: SweepResults
+
+      if (sweepCache[cacheKey]) {
+        sweepResults = sweepCache[cacheKey]
+        logEntry('info', `Using cached sweep results — ${sweepResults.size} connection${sweepResults.size !== 1 ? 's' : ''}`)
+      } else {
+        setFetchProgress({ phase: 'indexing', done: 0, total: connectionNames.length, current: '', startedAt: fetchStart })
+
+        sweepResults = await sweepConnections(
+          octopai,
+          company,
+          accessToken,
+          connectionNames,
+          (done, total, current) => {
+            setFetchProgress({ phase: 'sweeping', done, total, current, startedAt: fetchStart })
+          },
+          controller.signal,
+        )
+
+        if (controller.signal.aborted || fetchAbortRef.current !== controller) {
+          setFetchProgress(null)
+          return
+        }
+
+        setSweepCacheEntry(cacheKey, sweepResults)
+      }
+
+      const items = sweepToItems(sweepResults)
+      logEntry('ok', `Sweep complete — ${items.length.toLocaleString()} DB objects from ${sweepResults.size} connection${sweepResults.size !== 1 ? 's' : ''}`)
+
       const file = assetsToDiscoveryFile(items, [], `API — ${company}`)
-      logEntry('ok', `Fetched ${items.length.toLocaleString()} assets — injected as discovery source`)
       addFile(file)
+      setSweepCoverage(computeCoverage(inventory, items))
 
       setFetchProgress(null)
       setStatus('done', null)
@@ -151,6 +179,11 @@ export function ApiConfigPanel() {
       setFetchProgress(null)
       setStatus('error', msg)
     }
+  }
+
+  async function handleForceRefetch() {
+    clearSweepCache()
+    await handleFetch()
   }
 
   if (!isConnected) {
@@ -269,6 +302,18 @@ export function ApiConfigPanel() {
           {status === 'fetching' ? 'Fetching…' : status === 'done' ? 'Refetch' : 'Fetch from API'}
         </button>
 
+        {status === 'done' && (
+          <button
+            onClick={handleForceRefetch}
+            disabled={isBusy}
+            className="btn-ghost text-xs"
+            title="Clear cached results and re-fetch from API"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Force re-fetch
+          </button>
+        )}
+
         <button onClick={() => { fetchAbortRef.current?.abort(); clearSession(); clearMetrics(); setScopeConfig({ keyConnectionMap: {} }); setQuickRules([]) }} className="btn-ghost">
           <LogOut className="w-4 h-4" />
           Disconnect
@@ -279,26 +324,40 @@ export function ApiConfigPanel() {
       {fetchProgress && (
         <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border/60">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted">
-              {fetchProgress.done > 0
-                ? `Fetched ${fetchProgress.done.toLocaleString()} assets…`
-                : 'Fetching catalog…'}
+            <span className="text-muted truncate pr-2">
+              {fetchProgress.phase === 'indexing'
+                ? 'Building connection index…'
+                : fetchProgress.current
+                  ? `${fetchProgress.done + 1} / ${fetchProgress.total}: ${fetchProgress.current}`
+                  : `Swept ${fetchProgress.done} / ${fetchProgress.total} connections`}
             </span>
-            <span className="font-mono text-foreground flex items-center gap-2">
-              <span className="text-muted tabular-nums">{elapsed}s</span>
-            </span>
+            <span className="text-muted tabular-nums shrink-0">{elapsed}s</span>
           </div>
           <div className="h-1.5 rounded-full bg-border overflow-hidden">
-            <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
+            {fetchProgress.phase === 'sweeping' && fetchProgress.total > 0 ? (
+              <div
+                className="h-full rounded-full bg-primary/60 transition-all duration-300"
+                style={{ width: `${Math.round((fetchProgress.done / fetchProgress.total) * 100)}%` }}
+              />
+            ) : (
+              <div className="h-full rounded-full bg-primary/60 animate-pulse w-full" />
+            )}
           </div>
         </div>
       )}
 
       {/* Summary after done */}
       {status === 'done' && apiFile && !fetchProgress && (
-        <p className="text-xs text-muted">
-          {apiFile.rowCount.toLocaleString()} assets fetched from {company}.octopai.com — injected as discovery source
-        </p>
+        <div className="space-y-0.5">
+          <p className="text-xs text-muted">
+            {apiFile.rowCount.toLocaleString()} assets fetched from {company}.octopai.com — injected as discovery source
+          </p>
+          {sweepCoverage && (
+            <p className="text-xs text-muted/70">
+              {sweepCoverage.resolved} resolved · {sweepCoverage.unresolved} unresolved · {sweepCoverage.na} N/A
+            </p>
+          )}
+        </div>
       )}
 
       {/* Connection scoping — quick-assign rules + per-key review table */}

@@ -159,6 +159,34 @@ export function classifyTargetTech(key: string, knownSnowflakeDb?: string): Targ
   return 'standard'
 }
 
+// Parse an Informatica PowerCenter connection parameter key of the form
+//   $AppConnection_DB_SCHEMA  or  $DBConnection_DB_SCHEMA
+// The last underscore-delimited segment becomes the schema; the rest is the database.
+// Returns null when the key lacks the expected prefix, has only one segment after the
+// prefix, or ends with a known non-schema suffix (_DB, _src_DB, _TGT_DB, etc.) that
+// indicates the key is a named connection rather than a DB.Schema pair.
+export function parseInformaticaKey(key: string): { database: string; schema: string } | null {
+  const match = key.match(/^\$(?:App|DB)Connection_(.+)$/i)
+  if (!match) return null
+
+  const rest = match[1]
+  // Keys ending in _DB (or _src_DB, _TGT_DB, _tgt_db, etc.) are connection names,
+  // not DB.Schema pairs.
+  if (/_DB$/i.test(rest)) return null
+  // Keys with $$ contain Informatica variable references (e.g. $$curve_database_schema)
+  // that are not parseable as DB.Schema without evaluating the variable.
+  if (rest.includes('$$')) return null
+
+  const parts = rest.split('_')
+  if (parts.length < 2) return null // Need at least two segments: DB and SCHEMA
+
+  const schema = parts[parts.length - 1].toUpperCase()
+  const database = parts.slice(0, -1).join('_').toUpperCase()
+
+  if (!database || !schema) return null
+  return { database, schema }
+}
+
 // Return all unique connectionLogicName values from api_lookup rows, sorted.
 export function uniqueConnectionNames(
   impalaRows: Array<{ connectionLogicName: string }>,

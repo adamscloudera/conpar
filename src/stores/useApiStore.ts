@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { CoverageSummary, SweepResults } from '../Logic/api/connectionSweep.ts'
 
 export type ApiStatus = 'idle' | 'connecting' | 'connected' | 'fetching' | 'done' | 'error'
 
@@ -27,6 +28,8 @@ type ApiStore = {
   error: string | null
   queryLog: QueryLogEntry[]
   fetchProgress: FetchProgress
+  sweepCoverage: CoverageSummary | null
+  sweepCache: Record<string, SweepResults>
 
   setConfig: (company: string) => void
   setTokens: (params: {
@@ -41,6 +44,9 @@ type ApiStore = {
   addQueryLog: (entry: QueryLogEntry) => void
   setFetchProgress: (progress: FetchProgress) => void
   clearFetchState: () => void
+  setSweepCoverage: (coverage: CoverageSummary) => void
+  setSweepCacheEntry: (key: string, results: SweepResults) => void
+  clearSweepCache: () => void
 }
 
 export const useApiStore = create<ApiStore>((set) => ({
@@ -54,6 +60,8 @@ export const useApiStore = create<ApiStore>((set) => ({
   error: null,
   queryLog: [],
   fetchProgress: null,
+  sweepCoverage: null,
+  sweepCache: {},
 
   setConfig: (company) => set({ company }),
 
@@ -73,9 +81,14 @@ export const useApiStore = create<ApiStore>((set) => ({
       error: null,
       queryLog: [],
       fetchProgress: null,
+      sweepCoverage: null,
+      sweepCache: {},
     }),
 
   addQueryLog: (entry) => set((s) => ({ queryLog: [...s.queryLog, entry] })),
   setFetchProgress: (fetchProgress) => set({ fetchProgress }),
-  clearFetchState: () => set({ queryLog: [], fetchProgress: null }),
+  clearFetchState: () => set({ queryLog: [], fetchProgress: null, sweepCoverage: null }),
+  setSweepCoverage: (sweepCoverage) => set({ sweepCoverage }),
+  setSweepCacheEntry: (key, results) => set((s) => ({ sweepCache: { ...s.sweepCache, [key]: results } })),
+  clearSweepCache: () => set({ sweepCache: {} }),
 }))

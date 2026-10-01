@@ -1,6 +1,6 @@
 import type { CandidateSchema, ConfidenceLevel, ConnectionScopeConfig, DiscoveryFile, MappingResult, MappingStatus, TemplateRow } from '../../types.ts'
 import { canonicalToken, extractKeyIdentifier, extractPathTokens } from './tokenExtractor.ts'
-import { classifyConnectionKey, parseFullyQualifiedKey, snowflakeDbFromApiRows, snowflakeSchemaHint } from './connectionClassifier.ts'
+import { classifyConnectionKey, parseFullyQualifiedKey, parseInformaticaKey, snowflakeDbFromApiRows, snowflakeSchemaHint } from './connectionClassifier.ts'
 
 function tokenOverlap(pathTokens: Set<string>, name: string): number {
   const nameTokens = extractPathTokens(name)
@@ -105,9 +105,15 @@ function candidatesFromImpalaColumns(
     if (!dbFilter && keyTokenSet.size > 0) {
       const forced = forceIncludeDb?.toLowerCase()
       if (!forced || ir.databaseName.toLowerCase() !== forced) {
-        const dbParts = new Set(extractPathTokens(ir.databaseName))
+        // Check both databaseName and schemaName: some APIs (e.g. Informatica connections)
+        // return assets with empty databaseName but a populated schemaName that encodes the
+        // relevant identifier. Including schemaName tokens prevents all rows being dropped.
+        const dbAndSchemaParts = new Set([
+          ...extractPathTokens(ir.databaseName),
+          ...extractPathTokens(ir.schemaName),
+        ])
         let overlap = 0
-        for (const t of keyTokenSet) { if (dbParts.has(t)) overlap++ }
+        for (const t of keyTokenSet) { if (dbAndSchemaParts.has(t)) overlap++ }
         if (overlap === 0) continue
       }
     }
@@ -267,6 +273,30 @@ export function computeMappings(
         manualSchema: '',
         status: 'auto_filled' as MappingStatus,
         confidence: 'high' as ConfidenceLevel,
+      }
+    }
+
+    // Informatica PowerCenter connection parameter: $AppConnection_DB_SCHEMA or
+    // $DBConnection_DB_SCHEMA. Parse DB and schema directly from the key name.
+    // Status is needs_selection so the SE confirms before it populates the export.
+    const parsedInfaKey = !knownDb && !knownSchema ? parseInformaticaKey(row.key) : null
+    if (parsedInfaKey) {
+      const candidate: CandidateSchema = {
+        databaseName: parsedInfaKey.database,
+        schemaName: parsedInfaKey.schema,
+        score: 0,
+        signals: { pathTokenOverlap: 0, tableNameOverlap: 0, sourceFrequency: 0, keyDbOverlap: 0, keySchemaOverlap: 0 },
+        sourceFile: 'key-name inference',
+      }
+      return {
+        rowIndex,
+        templateRow: row,
+        candidates: [candidate],
+        selectedCandidate: candidate,
+        manualDatabase: '',
+        manualSchema: '',
+        status: 'needs_selection' as MappingStatus,
+        confidence: computeConfidence('needs_selection', candidate, [candidate]),
       }
     }
 
